@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study with AI - Online Classroom (Phase 4)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="top-meeting-bar card" id="topMeetingBar">
+        <div class="meeting-title-block">
+          <h1 data-i18n="meetingTitle"></h1>
+          <p data-i18n="meetingSubtitle"></p>
+        </div>
+        <div class="meeting-meta">
+          <span data-i18n="classCode"></span>
+          <span>01:12:08</span>
+          <div class="role-switch" id="roleSwitch"></div>
+        </div>
+      </header>
+
+      <main class="classroom-layout">
+        <section class="column column-left">
+          <article class="card panel teacher-camera-card" id="teacherCameraCard">
+            <div class="panel-header">
+              <h2 data-i18n="teacherCamera"></h2>
+              <span class="status-dot live" data-i18n="liveStatus"></span>
+            </div>
+            <p class="context-hint public" data-i18n="publicLayerHint"></p>
+            <div class="camera-placeholder teacher">
+              <div class="avatar-circle">DR</div>
+              <p>Dr. Rivera</p>
+            </div>
+          </article>
+
+          <article class="card panel teacher-workspace-panel" data-role-visibility="teacher">
+            <div class="panel-header">
+              <h2 data-i18n="teacherWorkspace"></h2>
+            </div>
+            <p class="context-hint teacher" data-i18n="teacherOnlyHint"></p>
+            <div class="teacher-answer-compact">
+              <p class="label" data-i18n="teacherAiAnswer"></p>
+              <p id="teacherAiAnswerText"></p>
+              <button id="sendToWhiteboardBtn" class="secondary" data-i18n="sendToWhiteboard"></button>
+            </div>
+            <div class="entry-actions">
+              <button id="teacherUploadBtn" data-i18n="upload"></button>
+              <button id="teacherPasteBtn" data-i18n="paste"></button>
+            </div>
+            <div class="attachment-list" id="teacherAttachmentList"></div>
+            <div class="quick-actions" id="teacherQuickActions"></div>
+            <div class="chat-log compact-log" id="teacherChatLog"></div>
+            <form class="chat-input-row" id="teacherChatForm">
+              <button type="button" id="teacherMicBtn" class="mic-btn" data-i18n="micStart"></button>
+              <input
+                id="teacherChatInput"
+                type="text"
+                aria-label="Teacher AI message"
+                data-i18n-placeholder="teacherInputPlaceholder"
+              />
+              <button type="submit" data-i18n="send"></button>
+            </form>
+          </article>
+        </section>
+
+        <section class="column column-center">
+          <article class="card panel whiteboard-panel stage" id="whiteboardPanel">
+            <div class="panel-header whiteboard-header">
+              <h2 data-i18n="whiteboardAndLesson"></h2>
+              <div class="segment-control" id="whiteboardTabs"></div>
+            </div>
+            <div class="panel-status-row">
+              <span id="boardModeHint" class="cap-pill"></span>
+              <span id="tempGrantHint" class="cap-pill muted"></span>
+              <span id="stateMachineHint" class="cap-pill muted"></span>
+              <span id="presentationHint" class="cap-pill muted"></span>
+            </div>
+            <p class="context-hint public" data-i18n="publicSharedHint"></p>
+
+            <div class="shared-surface card-soft">
+              <div class="panel-header">
+                <h3 data-i18n="sharedSurfaceTitle"></h3>
+                <button id="presentationToggleBtn" data-i18n="presentationModeOff"></button>
+              </div>
+              <div class="entry-actions" id="sharedSurfaceSources"></div>
+              <div class="surface-preview" id="surfacePreview"></div>
+              <div class="entry-actions">
+                <button id="captureCopyBtn" data-i18n="copySnapshot"></button>
+                <button id="captureToWhiteboardBtn" data-i18n="insertSnapshotToWhiteboard"></button>
+                <button id="captureToChatBtn" data-i18n="sendSnapshotToChat"></button>
+                <button id="captureToNotesBtn" data-i18n="saveSnapshotToNotes"></button>
+              </div>
+            </div>
+
+            <div class="whiteboard-tools" id="whiteboardTools"></div>
+            <div class="whiteboard-content" id="whiteboardContent" tabindex="0">
+              <div id="whiteboardStage" class="whiteboard-stage"></div>
+            </div>
+
+            <div class="whiteboard-inspector card-soft">
+              <div class="panel-header">
+                <h3 data-i18n="inspectPanel"></h3>
+                <span class="cap-pill" id="capabilitySummary"></span>
+              </div>
+              <p id="selectedSnippet"></p>
+              <p id="selectedObjectMeta" class="meta-line"></p>
+              <p id="conflictHint" class="conflict-line"></p>
+              <ul id="collabCueList" class="simple-list"></ul>
+              <div class="action-row">
+                <button id="askAiFromSelectionBtn" data-i18n="askAiAboutSelection"></button>
+                <button id="saveNoteBtn" data-i18n="saveToPersonalNotes"></button>
+              </div>
+            </div>
+          </article>
+
+          <article class="card panel student-camera-grid" id="studentCameraGrid">
+            <div class="panel-header">
+              <h2 data-i18n="studentCameraGrid"></h2>
+            </div>
+            <div class="grid" id="studentGrid"></div>
+          </article>
+        </section>
+
+        <section class="column column-right">
+          <article class="card panel interaction-status-hub" id="interactionStatusHub">
+            <div class="panel-header">
+              <h2 data-i18n="publicInteractionHub"></h2>
+            </div>
+            <p class="context-hint public" data-i18n="publicInteractionHint"></p>
+            <div class="entry-actions">
+              <button id="publicUploadBtn" data-i18n="upload"></button>
+              <button id="publicPasteBtn" data-i18n="paste"></button>
+            </div>
+            <div class="attachment-list" id="publicAttachmentList"></div>
+            <div class="segment-control" id="hubTabs"></div>
+            <ul id="hubActiveList" class="hub-active-list"></ul>
+          </article>
+
+          <article class="card panel student-ai-workspace" id="studentAiWorkspace">
+            <div class="panel-header">
+              <h2 data-i18n="studentAiWorkspace"></h2>
+            </div>
+            <p class="context-hint private" data-i18n="studentPrivateHint"></p>
+            <div class="entry-actions">
+              <button id="studentUploadBtn" data-i18n="upload"></button>
+              <button id="studentPasteBtn" data-i18n="paste"></button>
+            </div>
+            <div class="attachment-list" id="studentAttachmentList"></div>
+            <div class="student-ai-answer-panel card-soft">
+              <p class="label" data-i18n="studentAiAnswer"></p>
+              <p id="studentAiAnswerText"></p>
+            </div>
+            <div class="student-ai-chat-panel compact">
+              <div class="chat-log compact-log" id="studentChatLog"></div>
+              <form class="chat-input-row" id="studentChatForm">
+                <button type="button" id="studentMicBtn" class="mic-btn" data-i18n="micStart"></button>
+                <input
+                  id="studentChatInput"
+                  type="text"
+                  aria-label="Student AI message"
+                  data-i18n-placeholder="studentInputPlaceholder"
+                />
+                <button type="submit" data-i18n="send"></button>
+              </form>
+            </div>
+          </article>
+
+          <article class="card panel teacher-governance" data-role-visibility="teacher">
+            <div class="panel-header">
+              <h2 data-i18n="teacherControls"></h2>
+            </div>
+            <p class="context-hint teacher" data-i18n="teacherOnlyHint"></p>
+            <button id="runPhase4FlowBtn" class="flow-btn" data-i18n="runPhase4Flow"></button>
+            <div class="segment-control" id="teacherControlTabs"></div>
+            <div id="teacherControlBody" class="card-soft"></div>
+          </article>
+        </section>
+      </main>
+
+      <details class="debug-panel card">
+        <summary data-i18n="debugPanelTitle"></summary>
+        <ul id="debugList" class="simple-list"></ul>
+      </details>
+
+      <footer class="bottom-toolbar card" id="bottomToolbar">
+        <div class="toolbar-groups">
+          <div class="toolbar-group" id="toolbarAudioVideo"></div>
+          <div class="toolbar-group" id="toolbarTeaching"></div>
+          <div class="toolbar-group" id="toolbarParticipation"></div>
+          <div class="toolbar-group" id="toolbarSession"></div>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
