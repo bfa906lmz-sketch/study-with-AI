@@ -44,6 +44,12 @@ export function renderRoleSwitch(renderAll) {
 function renderStudentGrid() {
   const root = document.getElementById('studentGrid');
   root.innerHTML = '';
+
+  const teacherTile = document.createElement('div');
+  teacherTile.className = 'student-tile teacher-tile';
+  teacherTile.innerHTML = '<strong>Koi <span class="teacher-badge">Teacher</span></strong><span>Live</span>';
+  root.appendChild(teacherTile);
+
   state.students.forEach((s) => {
     const tile = document.createElement('div');
     tile.className = 'student-tile';
@@ -155,6 +161,8 @@ function renderSharedSurface() {
   });
   const surface = state.surface.surfaces.find((s) => s.surfaceId === state.surface.activeSurfaceId);
   document.getElementById('surfacePreview').textContent = `${surface.title} • source: ${surface.sourceType} • owner: ${surface.ownerId}`;
+  const status = document.getElementById('surfaceStatusPill');
+  if (status) status.textContent = state.surface.presentationMode ? 'Presenting' : 'Live';
   document.getElementById('presentationToggleBtn').textContent = state.surface.presentationMode ? messages.presentationModeOn : messages.presentationModeOff;
 }
 
@@ -184,6 +192,14 @@ function wireSpeech() {
 }
 
 function wireSurfaceActions(renderAll) {
+  const sharedCard = document.getElementById('sharedSurfaceCard');
+  const expandBtn = document.getElementById('sharedSurfaceExpandBtn');
+  if (expandBtn && sharedCard) {
+    expandBtn.onclick = () => {
+      sharedCard.classList.toggle('expanded');
+      expandBtn.textContent = sharedCard.classList.contains('expanded') ? 'Close' : 'Open';
+    };
+  }
   document.getElementById('presentationToggleBtn').onclick = () => { togglePresentationMode(); renderAll(); };
   document.getElementById('captureCopyBtn').onclick = () => { const snap = captureSurfaceSnapshot(); state.hubContent.Requests.push(`Snapshot copied (mock): ${snap.name}`); renderAll(); };
   document.getElementById('captureToWhiteboardBtn').onclick = () => { const snap = captureSurfaceSnapshot(); snapshotToWhiteboard(snap); renderAll(); };

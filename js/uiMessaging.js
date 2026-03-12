@@ -14,23 +14,26 @@ function renderButtons(containerId, labels, className, activeLabel, onClick) {
   });
 }
 
+function buildAttachmentCards(attachmentIds = []) {
+  return attachmentIds
+    .map((id) => state.attachments.find((a) => a.attachmentId === id))
+    .filter(Boolean)
+    .map((att) => renderAttachmentCard(att))
+    .join('');
+}
+
+function buildMessageHtml({ text, attachments = [] }, role = 'ai') {
+  const hasAtt = attachments.length > 0;
+  return `<div class="chat-message ${role === 'user' ? 'user' : 'ai'} ${hasAtt ? 'with-attachments' : ''}"><div>${text}</div>${hasAtt ? buildAttachmentCards(attachments) : ''}</div>`;
+}
+
 export function renderChat(logId, list) {
   const log = document.getElementById(logId);
   log.innerHTML = '';
   list.slice(-4).forEach((msg) => {
-    const hasAtt = msg.attachments && msg.attachments.length;
     const bubble = document.createElement('div');
-    bubble.className = `chat-message ${msg.role === 'user' ? 'user' : 'ai'} ${hasAtt ? 'with-attachments' : ''}`;
-    bubble.innerHTML = `<div>${msg.text}</div>`;
-    if (hasAtt) {
-      const html = msg.attachments
-        .map((id) => state.attachments.find((a) => a.attachmentId === id))
-        .filter(Boolean)
-        .map((att) => renderAttachmentCard(att))
-        .join('');
-      bubble.innerHTML += html;
-    }
-    log.appendChild(bubble);
+    bubble.innerHTML = buildMessageHtml(msg, msg.role);
+    log.appendChild(bubble.firstElementChild);
   });
 }
 
@@ -64,17 +67,8 @@ export function renderHub() {
   (state.hubContent[state.activeHubTab] || []).forEach((entry) => {
     const normalized = normalizeHubEntry(entry);
     const li = document.createElement('li');
-    li.textContent = normalized.text;
-
-    if (normalized.attachments.length) {
-      const html = normalized.attachments
-        .map((id) => state.attachments.find((a) => a.attachmentId === id))
-        .filter(Boolean)
-        .map((att) => renderAttachmentCard(att))
-        .join('');
-      li.innerHTML += html;
-    }
-
+    li.className = 'hub-entry';
+    li.innerHTML = buildMessageHtml(normalized, 'ai');
     root.appendChild(li);
   });
 }

@@ -18,8 +18,8 @@ export const state = {
   roomId: "room-phy-402", boardId: "board-main", teacherId: "teacher-dr-rivera", currentRole: ROLE.TEACHER, currentUserId: "teacher-dr-rivera",
   activeHubTab: messages.hubTabs[0], activeTeacherControlTab: messages.teacherControlTabs[0], currentTool: "Select", selectedObjectId: null,
   students: [
-    { id: "stu-ava", name: "Ava", status: "Listening", groupId: "group-a" }, { id: "stu-liam", name: "Liam", status: "Note-taking", groupId: "group-a" },
-    { id: "stu-noah", name: "Noah", status: "Asking question", groupId: "group-b" }, { id: "stu-emma", name: "Emma", status: "In breakout prep", groupId: "group-b" }
+    { id: "stu-ava", name: "student1", status: "Listening", groupId: "group-a" }, { id: "stu-liam", name: "student2", status: "Note-taking", groupId: "group-a" },
+    { id: "stu-noah", name: "student3", status: "Asking question", groupId: "group-b" }, { id: "stu-emma", name: "student4", status: "In breakout prep", groupId: "group-b" }
   ],
   whiteboard: { activeTab: "Whiteboard", objects: [], baselineObjects: [] },
   teacherAiAnswer: "AI Suggestion: Use momentum diagrams then compare pre/post vectors.", studentAiAnswer: "Student Hint: First identify system boundaries before equations.",
@@ -54,7 +54,7 @@ export const clone = (v) => JSON.parse(JSON.stringify(v));
 export const now = () => new Date().toISOString();
 
 export function getUser(userId) {
-  if (userId === state.teacherId) return { id: state.teacherId, name: "Dr. Rivera", role: ROLE.TEACHER, groupId: null };
+  if (userId === state.teacherId) return { id: state.teacherId, name: "Koi", role: ROLE.TEACHER, groupId: null };
   return state.students.find((s) => s.id === userId) || { id: userId, name: userId, role: ROLE.STUDENT, groupId: null };
 }
 
