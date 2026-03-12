@@ -28,78 +28,46 @@
 
       <main class="classroom-layout">
         <section class="column column-left">
-          <article class="card panel teacher-camera-card" id="teacherCameraCard">
-            <div class="panel-header">
-              <h2 data-i18n="teacherCamera"></h2>
-              <span class="status-dot live" data-i18n="liveStatus"></span>
-            </div>
-            <p class="context-hint public" data-i18n="publicLayerHint"></p>
-            <div class="camera-placeholder teacher">
-              <div class="avatar-circle">DR</div>
-              <p>Dr. Rivera</p>
-            </div>
-          </article>
-
-          <article class="card panel teacher-workspace-panel" data-role-visibility="teacher">
-            <div class="panel-header">
-              <h2 data-i18n="teacherWorkspace"></h2>
-            </div>
-            <p class="context-hint teacher" data-i18n="teacherOnlyHint"></p>
-            <div class="teacher-answer-compact">
-              <p class="label" data-i18n="teacherAiAnswer"></p>
-              <p id="teacherAiAnswerText"></p>
-              <button id="sendToWhiteboardBtn" class="secondary" data-i18n="sendToWhiteboard"></button>
-            </div>
-            <div class="entry-actions">
-              <button id="teacherUploadBtn" data-i18n="upload"></button>
-              <button id="teacherPasteBtn" data-i18n="paste"></button>
-            </div>
-            <div class="attachment-list" id="teacherAttachmentList"></div>
-            <div class="quick-actions" id="teacherQuickActions"></div>
-            <div class="chat-log compact-log" id="teacherChatLog"></div>
-            <form class="chat-input-row" id="teacherChatForm">
-              <button type="button" id="teacherMicBtn" class="mic-btn" data-i18n="micStart"></button>
-              <input
-                id="teacherChatInput"
-                type="text"
-                aria-label="Teacher AI message"
-                data-i18n-placeholder="teacherInputPlaceholder"
-              />
-              <button type="submit" data-i18n="send"></button>
-            </form>
-          </article>
-        </section>
-
-        <section class="column column-center">
           <article class="card panel whiteboard-panel stage" id="whiteboardPanel">
-            <div class="panel-header whiteboard-header">
-              <h2 data-i18n="whiteboardAndLesson"></h2>
-              <div class="segment-control" id="whiteboardTabs"></div>
+            <div class="whiteboard-top-compact">
+              <div class="panel-header whiteboard-header">
+                <h2 data-i18n="whiteboardAndLesson"></h2>
+                <div class="segment-control" id="whiteboardTabs"></div>
+              </div>
+              <div class="whiteboard-tools" id="whiteboardTools"></div>
+              <div class="panel-status-row">
+                <span id="boardModeHint" class="cap-pill"></span>
+                <span id="tempGrantHint" class="cap-pill muted"></span>
+                <span id="stateMachineHint" class="cap-pill muted"></span>
+                <span id="presentationHint" class="cap-pill muted"></span>
+              </div>
             </div>
-            <div class="panel-status-row">
-              <span id="boardModeHint" class="cap-pill"></span>
-              <span id="tempGrantHint" class="cap-pill muted"></span>
-              <span id="stateMachineHint" class="cap-pill muted"></span>
-              <span id="presentationHint" class="cap-pill muted"></span>
-            </div>
-            <p class="context-hint public" data-i18n="publicSharedHint"></p>
 
-            <div class="shared-surface card-soft">
-              <div class="panel-header">
-                <h3 data-i18n="sharedSurfaceTitle"></h3>
-                <button id="presentationToggleBtn" data-i18n="presentationModeOff"></button>
+            <div class="shared-surface card-soft" id="sharedSurfaceCard">
+              <div class="shared-surface-compact-row">
+                <div class="shared-surface-meta">
+                  <h3 data-i18n="sharedSurfaceTitle"></h3>
+                  <span class="surface-status-pill" id="surfaceStatusPill">Live</span>
+                </div>
+                <div class="shared-surface-primary-actions">
+                  <button id="captureCopyBtn" data-i18n="copySnapshot"></button>
+                  <button id="captureToWhiteboardBtn" data-i18n="insertSnapshotToWhiteboard"></button>
+                  <button id="sharedSurfaceExpandBtn" type="button">Open</button>
+                </div>
               </div>
               <div class="entry-actions" id="sharedSurfaceSources"></div>
               <div class="surface-preview" id="surfacePreview"></div>
-              <div class="entry-actions">
-                <button id="captureCopyBtn" data-i18n="copySnapshot"></button>
-                <button id="captureToWhiteboardBtn" data-i18n="insertSnapshotToWhiteboard"></button>
-                <button id="captureToChatBtn" data-i18n="sendSnapshotToChat"></button>
-                <button id="captureToNotesBtn" data-i18n="saveSnapshotToNotes"></button>
+              <div class="action-row compact workspace-actions" id="surfaceActionRow">
+                <div class="core-actions">
+                  <button id="presentationToggleBtn" data-i18n="presentationModeOff"></button>
+                </div>
+                <div class="assist-actions">
+                  <button id="captureToChatBtn" data-i18n="sendSnapshotToChat"></button>
+                  <button id="captureToNotesBtn" data-i18n="saveSnapshotToNotes"></button>
+                </div>
               </div>
             </div>
 
-            <div class="whiteboard-tools" id="whiteboardTools"></div>
             <div class="whiteboard-content" id="whiteboardContent" tabindex="0">
               <div id="whiteboardStage" class="whiteboard-stage"></div>
             </div>
@@ -120,47 +88,25 @@
             </div>
           </article>
 
-          <article class="card panel student-camera-grid" id="studentCameraGrid">
-            <div class="panel-header">
-              <h2 data-i18n="studentCameraGrid"></h2>
-            </div>
-            <div class="grid" id="studentGrid"></div>
-          </article>
-        </section>
-
-        <section class="column column-right">
-          <article class="card panel interaction-status-hub" id="interactionStatusHub">
-            <div class="panel-header">
-              <h2 data-i18n="publicInteractionHub"></h2>
-            </div>
-            <p class="context-hint public" data-i18n="publicInteractionHint"></p>
-            <div class="entry-actions">
-              <button id="publicUploadBtn" data-i18n="upload"></button>
-              <button id="publicPasteBtn" data-i18n="paste"></button>
-            </div>
-            <div class="attachment-list" id="publicAttachmentList"></div>
-            <div class="segment-control" id="hubTabs"></div>
-            <ul id="hubActiveList" class="hub-active-list"></ul>
-          </article>
+          
 
           <article class="card panel student-ai-workspace" id="studentAiWorkspace">
-            <div class="panel-header">
-              <h2 data-i18n="studentAiWorkspace"></h2>
+            <div class="student-ai-top">
+              <div class="panel-header">
+                <h2>Student ~ AI Q&A</h2>
+              </div>
+              <p class="context-hint private" data-i18n="studentPrivateHint"></p>
+              <div class="attachment-list" id="studentAttachmentList"></div>
             </div>
-            <p class="context-hint private" data-i18n="studentPrivateHint"></p>
-            <div class="entry-actions">
-              <button id="studentUploadBtn" data-i18n="upload"></button>
-              <button id="studentPasteBtn" data-i18n="paste"></button>
-            </div>
-            <div class="attachment-list" id="studentAttachmentList"></div>
-            <div class="student-ai-answer-panel card-soft">
-              <p class="label" data-i18n="studentAiAnswer"></p>
-              <p id="studentAiAnswerText"></p>
-            </div>
-            <div class="student-ai-chat-panel compact">
+            <div class="student-ai-middle">
               <div class="chat-log compact-log" id="studentChatLog"></div>
+            </div>
+            <div class="student-ai-bottom">
+              <div class="student-ai-answer-panel card-soft">
+                <p class="label" data-i18n="studentAiAnswer"></p>
+                <p id="studentAiAnswerText"></p>
+              </div>
               <form class="chat-input-row" id="studentChatForm">
-                <button type="button" id="studentMicBtn" class="mic-btn" data-i18n="micStart"></button>
                 <input
                   id="studentChatInput"
                   type="text"
@@ -169,8 +115,18 @@
                 />
                 <button type="submit" data-i18n="send"></button>
               </form>
+              <div class="action-row compact workspace-actions" id="studentActionRow">
+                <div class="core-actions">
+                  <button id="studentUploadBtn" data-i18n="upload"></button>
+                  <button id="studentPasteBtn" data-i18n="paste"></button>
+                </div>
+                <div class="assist-actions">
+                  <button type="button" id="studentMicBtn" class="mic-btn" data-i18n="micStart"></button>
+                </div>
+              </div>
             </div>
           </article>
+
 
           <article class="card panel teacher-governance" data-role-visibility="teacher">
             <div class="panel-header">
@@ -182,6 +138,58 @@
             <div id="teacherControlBody" class="card-soft"></div>
           </article>
         </section>
+
+        <section class="column column-center">
+          <article class="card panel teacher-workspace-panel" data-role-visibility="teacher">
+            <div class="teacher-workspace-top">
+              <div class="panel-header">
+                <h2 data-i18n="teacherWorkspace"></h2>
+                <span class="status-dot live" data-i18n="liveStatus"></span>
+              </div>
+              <p class="context-hint teacher" data-i18n="teacherOnlyHint"></p>
+              <div class="teacher-answer-compact">
+                <p class="label" data-i18n="teacherAiAnswer"></p>
+                <p id="teacherAiAnswerText"></p>
+                <button id="sendToWhiteboardBtn" class="secondary" data-i18n="sendToWhiteboard"></button>
+              </div>
+            </div>
+            <div class="teacher-workspace-middle">
+              <div class="chat-log compact-log" id="teacherChatLog"></div>
+            </div>
+            <div class="teacher-workspace-bottom">
+              <div class="attachment-list" id="teacherAttachmentList"></div>
+              <div class="quick-actions" id="teacherQuickActions"></div>
+            </div>
+          </article>
+
+          
+        </section>
+
+        <section class="column column-right">
+          <article class="card panel interaction-status-hub" id="interactionStatusHub">
+            <div class="panel-header">
+              <h2 data-i18n="publicInteractionHub"></h2>
+            </div>
+            <p class="context-hint public" data-i18n="publicInteractionHint"></p>
+            <div class="action-row compact workspace-actions" id="publicActionRow">
+              <div class="core-actions">
+                <button id="publicUploadBtn" data-i18n="upload"></button>
+                <button id="publicPasteBtn" data-i18n="paste"></button>
+              </div>
+              <div class="assist-actions"></div>
+            </div>
+            <div class="attachment-list" id="publicAttachmentList"></div>
+            <div class="segment-control" id="hubTabs"></div>
+            <ul id="hubActiveList" class="hub-active-list"></ul>
+          </article>
+
+          <article class="card panel student-camera-grid" id="studentCameraGrid">
+            <div class="panel-header">
+              <h2 data-i18n="studentCameraGrid"></h2>
+            </div>
+            <div class="grid" id="studentGrid"></div>
+          </article>
+        </section>
       </main>
 
       <details class="debug-panel card">
@@ -189,8 +197,30 @@
         <ul id="debugList" class="simple-list"></ul>
       </details>
 
-      <footer class="bottom-toolbar card" id="bottomToolbar">
-        <div class="toolbar-groups">
+      <footer class="bottom-toolbar card teacher-input-bar" id="bottomToolbar">
+        <div class="teacher-input-row-wrap">
+          <span class="teacher-input-label">Teacher Input:</span>
+          <form class="chat-input-row" id="teacherChatForm">
+            <input
+              id="teacherChatInput"
+              type="text"
+              aria-label="Teacher AI message"
+              data-i18n-placeholder="teacherInputPlaceholder"
+            />
+            <button type="submit" data-i18n="send"></button>
+          </form>
+          <div class="action-row compact workspace-actions" id="teacherActionRow">
+            <div class="core-actions">
+              <button id="teacherUploadBtn" data-i18n="upload"></button>
+              <button id="teacherPasteBtn" data-i18n="paste"></button>
+            </div>
+            <div class="assist-actions">
+              <button type="button" id="teacherMicBtn" class="mic-btn" data-i18n="micStart"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar-groups hidden">
           <div class="toolbar-group" id="toolbarAudioVideo"></div>
           <div class="toolbar-group" id="toolbarTeaching"></div>
           <div class="toolbar-group" id="toolbarParticipation"></div>
