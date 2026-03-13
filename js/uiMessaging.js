@@ -1,4 +1,4 @@
-import { messages, state } from './model.js';
+import { ROLE, messages, state } from './model.js';
 import { renderAttachmentCard } from './attachments.js';
 
 function renderButtons(containerId, labels, className, activeLabel, onClick) {
@@ -56,6 +56,23 @@ function normalizeHubEntry(entry) {
   return { text: entry.text || '', attachments: entry.attachments || [] };
 }
 
+function renderHubComposer() {
+  const form = document.getElementById('publicHubChatForm');
+  const input = document.getElementById('publicHubChatInput');
+  const canShow = state.currentRole === ROLE.STUDENT && state.activeHubTab === 'Chat';
+  form.classList.toggle('hidden', !canShow);
+  if (!canShow) return;
+
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    state.hubContent.Chat.push(`student3: ${text}`);
+    input.value = '';
+    renderHub();
+  };
+}
+
 export function renderHub() {
   renderButtons('hubTabs', messages.hubTabs, 'segment-btn', state.activeHubTab, (tab) => {
     state.activeHubTab = tab;
@@ -71,4 +88,6 @@ export function renderHub() {
     li.innerHTML = buildMessageHtml(normalized, 'ai');
     root.appendChild(li);
   });
+
+  renderHubComposer();
 }

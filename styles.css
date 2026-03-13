@@ -916,3 +916,20 @@ body.role-teacher .column-center { grid-template-rows: 1fr; }
 .student-camera-grid .student-tile.teacher-tile {
   grid-column: span 2;
 }
+
+.hub-chat-composer {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(86, 115, 172, 0.38);
+}
+
+.hub-chat-composer input {
+  min-height: 25px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.hub-chat-composer button {
+  min-height: 25px;
+  padding: 3px 9px;
+}

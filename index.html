@@ -182,6 +182,15 @@
             <div class="attachment-list" id="publicAttachmentList"></div>
             <div class="segment-control" id="hubTabs"></div>
             <ul id="hubActiveList" class="hub-active-list"></ul>
+            <form class="chat-input-row hub-chat-composer hidden" id="publicHubChatForm" data-role-visibility="student">
+              <input
+                id="publicHubChatInput"
+                type="text"
+                aria-label="Public class chat message"
+                data-i18n-placeholder="publicChatPlaceholder"
+              />
+              <button type="submit" data-i18n="send"></button>
+            </form>
           </article>
 
           <article class="card panel student-camera-grid" id="studentCameraGrid">
