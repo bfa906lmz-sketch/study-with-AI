@@ -820,3 +820,116 @@ button.active {
 }
 
 .student-camera-grid .grid { min-height: 0; max-height: 100%; overflow: auto; }
+
+/* Role-specific surfaces */
+body.role-student .classroom-layout {
+  grid-template-columns: minmax(460px, 48fr) minmax(320px, 28fr) minmax(300px, 24fr);
+}
+
+body.role-student .column-left { grid-template-rows: 1fr; }
+body.role-student .column-center { grid-template-rows: 1fr; }
+body.role-student #whiteboardPanel { height: 100%; }
+
+body.role-teacher .column-left { grid-template-rows: 72fr 28fr; }
+body.role-teacher .column-center { grid-template-rows: 1fr; }
+
+.column-center .student-ai-workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 24% 44% 32%;
+  gap: 5px;
+}
+
+.column-center .student-ai-top,
+.column-center .student-ai-middle,
+.column-center .student-ai-bottom {
+  min-height: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.column-center .student-ai-middle .chat-log {
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  overflow: auto;
+}
+
+.tool-btn.locked {
+  opacity: 0.6;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.student-personal-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.student-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.student-more-wrap {
+  position: relative;
+  margin-left: auto;
+}
+
+.student-more-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  min-width: 130px;
+  background: rgba(12, 25, 48, 0.96);
+  border: 1px solid rgba(92, 126, 185, 0.5);
+  border-radius: 8px;
+}
+
+.student-status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.status-tag {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(110, 141, 197, 0.45);
+}
+
+.status-tag.pending { color: #fde68a; background: rgba(120, 53, 15, 0.35); }
+.status-tag.shared { color: #a5f3fc; background: rgba(8, 47, 73, 0.35); }
+.status-tag.granted { color: #bbf7d0; background: rgba(20, 83, 45, 0.35); }
+.status-tag.rejected { color: #fecaca; background: rgba(127, 29, 29, 0.35); }
+
+.student-camera-grid .grid {
+  grid-template-columns: repeat(2, minmax(110px, 1fr));
+}
+
+.student-camera-grid .student-tile.teacher-tile {
+  grid-column: span 2;
+}
+
+.hub-chat-composer {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(86, 115, 172, 0.38);
+}
+
+.hub-chat-composer input {
+  min-height: 25px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.hub-chat-composer button {
+  min-height: 25px;
+  padding: 3px 9px;
+}

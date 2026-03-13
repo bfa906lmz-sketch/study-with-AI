@@ -90,10 +90,24 @@
 
           
 
-          <article class="card panel student-ai-workspace" id="studentAiWorkspace">
+
+
+          <article class="card panel teacher-governance" data-role-visibility="teacher">
+            <div class="panel-header">
+              <h2 data-i18n="teacherControls"></h2>
+            </div>
+            <p class="context-hint teacher" data-i18n="teacherOnlyHint"></p>
+            <button id="runPhase4FlowBtn" class="flow-btn" data-i18n="runPhase4Flow"></button>
+            <div class="segment-control" id="teacherControlTabs"></div>
+            <div id="teacherControlBody" class="card-soft"></div>
+          </article>
+        </section>
+
+        <section class="column column-center">
+          <article class="card panel student-ai-workspace" id="studentAiWorkspace" data-role-visibility="student">
             <div class="student-ai-top">
               <div class="panel-header">
-                <h2>Student ~ AI Q&A</h2>
+                <h2 data-i18n="studentAiWorkspace"></h2>
               </div>
               <p class="context-hint private" data-i18n="studentPrivateHint"></p>
               <div class="attachment-list" id="studentAttachmentList"></div>
@@ -115,31 +129,25 @@
                 />
                 <button type="submit" data-i18n="send"></button>
               </form>
-              <div class="action-row compact workspace-actions" id="studentActionRow">
-                <div class="core-actions">
-                  <button id="studentUploadBtn" data-i18n="upload"></button>
-                  <button id="studentPasteBtn" data-i18n="paste"></button>
+              <div class="student-personal-actions card-soft" id="studentPersonalActions">
+                <div class="action-row compact student-primary-actions">
+                  <button type="button" id="studentRaiseHandBtn" data-i18n="studentRaiseHand"></button>
+                  <button type="button" id="studentRequestUploadBtn" data-i18n="studentRequestUpload"></button>
+                  <button type="button" id="studentShareBtn" data-i18n="studentShareToClass"></button>
+                  <button type="button" id="studentSubmitRequestBtn" data-i18n="studentSubmitRequest"></button>
+                  <div class="student-more-wrap">
+                    <button type="button" id="studentMoreBtn" data-i18n="studentMore"></button>
+                    <div class="student-more-menu hidden" id="studentMoreMenu">
+                      <button type="button" id="studentPasteBtn" data-i18n="paste"></button>
+                      <button type="button" id="studentMicBtn" class="mic-btn" data-i18n="micStart"></button>
+                    </div>
+                  </div>
                 </div>
-                <div class="assist-actions">
-                  <button type="button" id="studentMicBtn" class="mic-btn" data-i18n="micStart"></button>
-                </div>
+                <div class="student-status-tags" id="studentStatusTags"></div>
               </div>
             </div>
           </article>
 
-
-          <article class="card panel teacher-governance" data-role-visibility="teacher">
-            <div class="panel-header">
-              <h2 data-i18n="teacherControls"></h2>
-            </div>
-            <p class="context-hint teacher" data-i18n="teacherOnlyHint"></p>
-            <button id="runPhase4FlowBtn" class="flow-btn" data-i18n="runPhase4Flow"></button>
-            <div class="segment-control" id="teacherControlTabs"></div>
-            <div id="teacherControlBody" class="card-soft"></div>
-          </article>
-        </section>
-
-        <section class="column column-center">
           <article class="card panel teacher-workspace-panel" data-role-visibility="teacher">
             <div class="teacher-workspace-top">
               <div class="panel-header">
@@ -171,21 +179,23 @@
               <h2 data-i18n="publicInteractionHub"></h2>
             </div>
             <p class="context-hint public" data-i18n="publicInteractionHint"></p>
-            <div class="action-row compact workspace-actions" id="publicActionRow">
-              <div class="core-actions">
-                <button id="publicUploadBtn" data-i18n="upload"></button>
-                <button id="publicPasteBtn" data-i18n="paste"></button>
-              </div>
-              <div class="assist-actions"></div>
-            </div>
             <div class="attachment-list" id="publicAttachmentList"></div>
             <div class="segment-control" id="hubTabs"></div>
             <ul id="hubActiveList" class="hub-active-list"></ul>
+            <form class="chat-input-row hub-chat-composer hidden" id="publicHubChatForm" data-role-visibility="student">
+              <input
+                id="publicHubChatInput"
+                type="text"
+                aria-label="Public class chat message"
+                data-i18n-placeholder="publicChatPlaceholder"
+              />
+              <button type="submit" data-i18n="send"></button>
+            </form>
           </article>
 
           <article class="card panel student-camera-grid" id="studentCameraGrid">
             <div class="panel-header">
-              <h2 data-i18n="studentCameraGrid"></h2>
+              <h2 data-i18n="cameraPanel"></h2>
             </div>
             <div class="grid" id="studentGrid"></div>
           </article>
@@ -197,7 +207,7 @@
         <ul id="debugList" class="simple-list"></ul>
       </details>
 
-      <footer class="bottom-toolbar card teacher-input-bar" id="bottomToolbar">
+      <footer class="bottom-toolbar card teacher-input-bar" id="bottomToolbar" data-role-visibility="teacher">
         <div class="teacher-input-row-wrap">
           <span class="teacher-input-label">Teacher Input:</span>
           <form class="chat-input-row" id="teacherChatForm">
