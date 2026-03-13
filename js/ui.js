@@ -26,7 +26,10 @@ function renderButtons(containerId, labels, className, activeLabel, onClick) {
 }
 
 export function updateRoleVisibility() {
+  document.body.classList.toggle('role-student', state.currentRole === ROLE.STUDENT);
+  document.body.classList.toggle('role-teacher', state.currentRole === ROLE.TEACHER);
   document.querySelectorAll('[data-role-visibility="teacher"]').forEach((el) => el.classList.toggle('hidden', state.currentRole !== ROLE.TEACHER));
+  document.querySelectorAll('[data-role-visibility="student"]').forEach((el) => el.classList.toggle('hidden', state.currentRole !== ROLE.STUDENT));
 }
 
 export function renderRoleSwitch(renderAll) {
@@ -44,22 +47,25 @@ export function renderRoleSwitch(renderAll) {
 function renderStudentGrid() {
   const root = document.getElementById('studentGrid');
   root.innerHTML = '';
+  const fixedParticipants = [
+    { name: 'Koi', status: 'Instructor', teacher: true },
+    { name: 'student1', status: 'Live' },
+    { name: 'student2', status: 'Live' },
+    { name: 'student3', status: 'Live' },
+    { name: 'student4', status: 'Live' }
+  ];
 
-  const teacherTile = document.createElement('div');
-  teacherTile.className = 'student-tile teacher-tile';
-  teacherTile.innerHTML = '<strong>Koi <span class="teacher-badge">Teacher</span></strong><span>Live</span>';
-  root.appendChild(teacherTile);
-
-  state.students.forEach((s) => {
+  fixedParticipants.forEach((p) => {
     const tile = document.createElement('div');
-    tile.className = 'student-tile';
-    tile.innerHTML = `<strong>${s.name}</strong><span>${s.status}</span>`;
+    tile.className = `student-tile ${p.teacher ? 'teacher-tile' : ''}`;
+    tile.innerHTML = `<strong>${p.name}${p.teacher ? ' <span class="teacher-badge">Teacher</span>' : ''}</strong><span>${p.status}</span>`;
     root.appendChild(tile);
   });
 }
 
 function renderBoardHints() {
-  document.getElementById('boardModeHint').textContent = canEditBoard() ? 'Board: editable' : 'Board: read-only';
+  const hasWriteAccess = canEditBoard() || canAnnotateRegion('region-a');
+  document.getElementById('boardModeHint').textContent = hasWriteAccess ? 'Board: access granted' : 'Board: view-only (restricted)';
   const activeGrant = state.grantSessions.find((g) => g.active);
   document.getElementById('tempGrantHint').textContent = activeGrant ? `Grant: ${activeGrant.permissionType} in ${activeGrant.targetRegionId}` : 'Grant: none';
   document.getElementById('stateMachineHint').textContent = `State: ${state.collaboration.interactionStateByUser[state.currentUserId] || COLLAB_STATE.IDLE}`;
@@ -78,12 +84,31 @@ function renderWhiteboardTabs() {
   });
 }
 
+function canUseTool(tool) {
+  if (state.currentRole === ROLE.TEACHER) return true;
+  if (tool === 'Select' || tool === 'Pointer') return canViewBoard();
+  if (tool === 'Annotate') return canAnnotateRegion('region-a') || canEditBoard();
+  return canEditBoard();
+}
+
 function renderWhiteboardTools(renderAll) {
-  renderButtons('whiteboardTools', messages.whiteboardTools, 'tool-btn', state.currentTool, (tool) => {
-    state.currentTool = tool;
-    state.collaboration.activeToolByUser[state.currentUserId] = tool;
-    state.collaboration.interactionStateByUser[state.currentUserId] = tool === 'Annotate' ? COLLAB_STATE.ANNOTATING : COLLAB_STATE.SELECTING;
-    renderAll();
+  const root = document.getElementById('whiteboardTools');
+  root.innerHTML = '';
+  messages.whiteboardTools.forEach((tool) => {
+    const btn = document.createElement('button');
+    const enabled = canUseTool(tool);
+    btn.type = 'button';
+    btn.className = `tool-btn ${state.currentTool === tool ? 'active' : ''} ${enabled ? '' : 'locked'}`;
+    btn.textContent = enabled ? tool : `${tool} 🔒`;
+    btn.disabled = !enabled;
+    btn.onclick = () => {
+      if (!enabled) return;
+      state.currentTool = tool;
+      state.collaboration.activeToolByUser[state.currentUserId] = tool;
+      state.collaboration.interactionStateByUser[state.currentUserId] = tool === 'Annotate' ? COLLAB_STATE.ANNOTATING : COLLAB_STATE.SELECTING;
+      renderAll();
+    };
+    root.appendChild(btn);
   });
 }
 
@@ -94,7 +119,11 @@ function renderWhiteboardObjects(renderAll) {
   [...state.whiteboard.objects].filter((o) => !o.deleted).sort((a, b) => a.zIndex - b.zIndex).forEach((obj) => {
     const el = document.createElement('div');
     el.className = `wb-object type-${obj.objectType} ${state.selectedObjectId === obj.objectId ? 'selected' : ''}`;
-    el.style.left = `${obj.x}px`; el.style.top = `${obj.y}px`; el.style.width = `${obj.width}px`; el.style.height = `${obj.height}px`; el.style.zIndex = obj.zIndex;
+    el.style.left = `${obj.x}px`;
+    el.style.top = `${obj.y}px`;
+    el.style.width = `${obj.width}px`;
+    el.style.height = `${obj.height}px`;
+    el.style.zIndex = obj.zIndex;
     const selectors = Object.entries(state.collaboration.selectedObjectByUser).filter(([, selected]) => selected === obj.objectId).map(([uid2]) => getUser(uid2).name).join(', ');
     const grantScope = obj.sourceGrantSessionId ? `<span class="wb-cue grant">grant:${obj.sourceGrantSessionId.slice(0, 8)}</span>` : '';
     const lockCue = obj.lockedBy ? `<span class="wb-cue lock">locked:${getUser(obj.lockedBy).name}</span>` : '';
@@ -112,17 +141,27 @@ function renderInspector() {
   const conflict = document.getElementById('conflictHint');
   const cues = document.getElementById('collabCueList');
   cues.innerHTML = '';
-  if (!obj) { snippet.textContent = 'No object selected.'; meta.textContent = ''; conflict.textContent = ''; return; }
+  if (!obj) {
+    snippet.textContent = 'No object selected.';
+    meta.textContent = '';
+    conflict.textContent = '';
+    return;
+  }
   snippet.textContent = obj.content;
   meta.textContent = `owner:${obj.ownerType}:${obj.ownerId} • source:${obj.sourceType} • media:${obj.mediaType || 'none'}`;
   conflict.textContent = obj.conflictState === 'none' ? '' : `Conflict: ${obj.conflictState}`;
   [`source grant: ${obj.sourceGrantSessionId || 'none'}`, `lock/editor: ${obj.lockedBy ? getUser(obj.lockedBy).name : 'none'}`, `last operation: ${obj.lastOperationType}`, `source surface: ${obj.sourceSurfaceId || 'none'}`].forEach((line) => {
-    const li = document.createElement('li'); li.textContent = line; cues.appendChild(li);
+    const li = document.createElement('li');
+    li.textContent = line;
+    cues.appendChild(li);
   });
 }
 
 function renderTeacherControlTabs(renderTeacherControlBody) {
-  renderButtons('teacherControlTabs', messages.teacherControlTabs, 'segment-btn', state.activeTeacherControlTab, (tab) => { state.activeTeacherControlTab = tab; renderTeacherControlBody(); });
+  renderButtons('teacherControlTabs', messages.teacherControlTabs, 'segment-btn', state.activeTeacherControlTab, (tab) => {
+    state.activeTeacherControlTab = tab;
+    renderTeacherControlBody();
+  });
 }
 
 function renderTeacherControlBody(renderAll) {
@@ -143,7 +182,7 @@ function renderTeacherControlBody(renderAll) {
     body.innerHTML = `<ul class="simple-list">${state.operations.slice(-10).map((op) => `<li>${op.operationType} • object:${op.objectId || 'n/a'} • actor:${op.actorId} • region:${op.targetRegionId || 'board'}</li>`).join('') || '<li>No operations yet.</li>'}</ul>`;
     return;
   }
-  body.innerHTML = `<div class="action-row"><button id="rollbackSelectedObj">Rollback selected object</button><button id="rollbackLatestGrant">Rollback latest grant session</button><button id="restoreBaseline">Restore baseline</button></div>`;
+  body.innerHTML = '<div class="action-row"><button id="rollbackSelectedObj">Rollback selected object</button><button id="rollbackLatestGrant">Rollback latest grant session</button><button id="restoreBaseline">Restore baseline</button></div>';
   document.getElementById('rollbackSelectedObj').onclick = () => { rollbackSelectedObject(findObject); renderAll(); };
   document.getElementById('rollbackLatestGrant').onclick = () => { const grant = [...state.grantSessions].reverse().find((g) => g.sessionId); if (grant) rollbackGrantSession(grant.sessionId); renderAll(); };
   document.getElementById('restoreBaseline').onclick = () => { restoreTeacherBaseline(); renderAll(); };
@@ -178,17 +217,22 @@ function renderAttachmentLists() {
 function wireEntryPoints(renderAll) {
   document.getElementById('teacherUploadBtn').onclick = () => { mockUploadAttachment('teacher-workspace', 'teacher'); renderAll(); };
   document.getElementById('teacherPasteBtn').onclick = () => { mockPasteAttachment('teacher-workspace', 'teacher'); renderAll(); };
-  document.getElementById('studentUploadBtn').onclick = () => { mockUploadAttachment('student-workspace', 'student'); renderAll(); };
   document.getElementById('studentPasteBtn').onclick = () => { mockPasteAttachment('student-workspace', 'student'); renderAll(); };
-  document.getElementById('publicUploadBtn').onclick = () => { mockUploadAttachment('public-hub', 'public'); renderAll(); };
-  document.getElementById('publicPasteBtn').onclick = () => { mockPasteAttachment('public-hub', 'public'); renderAll(); };
 }
 
 function wireSpeech() {
   const teacherMic = document.getElementById('teacherMicBtn');
   const studentMic = document.getElementById('studentMicBtn');
-  teacherMic.onclick = () => { toggleSpeech('teacher'); teacherMic.classList.toggle('recording', state.speech.teacher.recording); teacherMic.textContent = state.speech.teacher.recording ? messages.micStop : messages.micStart; };
-  studentMic.onclick = () => { toggleSpeech('student'); studentMic.classList.toggle('recording', state.speech.student.recording); studentMic.textContent = state.speech.student.recording ? messages.micStop : messages.micStart; };
+  teacherMic.onclick = () => {
+    toggleSpeech('teacher');
+    teacherMic.classList.toggle('recording', state.speech.teacher.recording);
+    teacherMic.textContent = state.speech.teacher.recording ? messages.micStop : messages.micStart;
+  };
+  studentMic.onclick = () => {
+    toggleSpeech('student');
+    studentMic.classList.toggle('recording', state.speech.student.recording);
+    studentMic.textContent = state.speech.student.recording ? messages.micStop : messages.micStart;
+  };
 }
 
 function wireSurfaceActions(renderAll) {
@@ -201,7 +245,11 @@ function wireSurfaceActions(renderAll) {
     };
   }
   document.getElementById('presentationToggleBtn').onclick = () => { togglePresentationMode(); renderAll(); };
-  document.getElementById('captureCopyBtn').onclick = () => { const snap = captureSurfaceSnapshot(); state.hubContent.Requests.push(`Snapshot copied (mock): ${snap.name}`); renderAll(); };
+  document.getElementById('captureCopyBtn').onclick = () => {
+    const snap = captureSurfaceSnapshot();
+    state.hubContent.Shares.push(`Snapshot copied (mock): ${snap.name} • Approved`);
+    renderAll();
+  };
   document.getElementById('captureToWhiteboardBtn').onclick = () => { const snap = captureSurfaceSnapshot(); snapshotToWhiteboard(snap); renderAll(); };
   document.getElementById('captureToChatBtn').onclick = () => { const snap = captureSurfaceSnapshot(); snapshotToChat(snap, state.currentRole === ROLE.TEACHER ? 'teacher' : 'student'); renderAll(); };
   document.getElementById('captureToNotesBtn').onclick = () => { const snap = captureSurfaceSnapshot(); snapshotToNotes(snap); renderAll(); };
@@ -219,6 +267,69 @@ function wireInspectorActions(renderAll) {
     const obj = findObject(state.selectedObjectId);
     if (!obj || !canOperateOnObject(obj, 'inspect')) return;
     snapshotToNotes(createAttachment({ type: ATTACHMENT.WHITEBOARD_SNAPSHOT, sourceContext: 'whiteboard-inspector', name: `Selection ${obj.objectId}`, linkedObjectId: obj.objectId, metadata: { sizeLabel: 'mock 95KB' } }));
+    renderAll();
+  };
+}
+
+function setStudentStatus(statusKey) {
+  state.studentActionStatus = [statusKey];
+}
+
+function renderStudentStatusTags() {
+  const root = document.getElementById('studentStatusTags');
+  const map = {
+    pending: { cls: 'pending', label: messages.studentStatusPendingReview },
+    shared: { cls: 'shared', label: messages.studentStatusSharedToClass },
+    granted: { cls: 'granted', label: messages.studentStatusAccessGranted },
+    rejected: { cls: 'rejected', label: messages.studentStatusRejected }
+  };
+
+  const statuses = new Set(state.studentActionStatus || []);
+  if (canEditBoard() || canAnnotateRegion('region-a')) statuses.add('granted');
+  const hasApprovedStudentShare = (state.hubContent.Shares || []).some((entry) => {
+    const text = typeof entry === 'string' ? entry : entry.text;
+    return text.includes('student3 shared:') && text.includes('Approved');
+  });
+  if (hasApprovedStudentShare) statuses.add('shared');
+
+  root.innerHTML = [...statuses].map((status) => {
+    const item = map[status];
+    if (!item) return '';
+    return `<span class="status-tag ${item.cls}">${item.label}</span>`;
+  }).join('');
+}
+
+function wireStudentActions(renderAll) {
+  const moreBtn = document.getElementById('studentMoreBtn');
+  const moreMenu = document.getElementById('studentMoreMenu');
+  moreBtn.onclick = () => moreMenu.classList.toggle('hidden');
+
+  document.getElementById('studentRaiseHandBtn').onclick = () => {
+    state.hubContent['Hand Raises'].push('student3 raised hand for help.');
+    renderAll();
+  };
+
+  document.getElementById('studentRequestUploadBtn').onclick = () => {
+    setStudentStatus('pending');
+    state.hubContent['Hand Raises'].push('student3 requested upload access • Pending Review');
+    renderAll();
+  };
+
+  document.getElementById('studentShareBtn').onclick = () => {
+    mockPasteAttachment('student-workspace', 'student');
+    setStudentStatus('pending');
+    renderAll();
+  };
+
+  document.getElementById('studentSubmitRequestBtn').onclick = () => {
+    const prepared = state.attachments.filter((a) => a.sourceContext === 'student-workspace').slice(-1)[0];
+    if (!prepared) {
+      setStudentStatus('rejected');
+      renderAll();
+      return;
+    }
+    state.hubContent.Shares.push({ text: `student3 shared: ${prepared.name} • Pending Review`, attachments: [prepared.attachmentId] });
+    setStudentStatus('pending');
     renderAll();
   };
 }
@@ -261,13 +372,19 @@ function runPhase4Flow(renderAll) {
 
 function renderDebugPanel() {
   const lines = [
-    `currentRole: ${state.currentRole}`, `currentTool: ${state.currentTool}`, `currentSelection: ${state.selectedObjectId || 'none'}`,
+    `currentRole: ${state.currentRole}`,
+    `currentTool: ${state.currentTool}`,
+    `currentSelection: ${state.selectedObjectId || 'none'}`,
     `governanceState: ${state.collaboration.governanceState}`,
     `interactionState: ${state.collaboration.interactionStateByUser[state.currentUserId] || COLLAB_STATE.IDLE}`,
     `activeGrantSessions: ${state.grantSessions.filter((s) => s.active).map((s) => s.sessionId).join(',') || 'none'}`,
-    `activeSurface: ${state.surface.activeSurfaceId}`, `presentationMode: ${state.surface.presentationMode}`, `attachmentsTotal: ${state.attachments.length}`,
-    `speechTeacher: ${JSON.stringify(state.speech.teacher)}`, `speechStudent: ${JSON.stringify(state.speech.student)}`,
-    `activeUsers: ${state.collaboration.activeUsers.join(',')}`, `selectedObjectByUser: ${JSON.stringify(state.collaboration.selectedObjectByUser)}`,
+    `activeSurface: ${state.surface.activeSurfaceId}`,
+    `presentationMode: ${state.surface.presentationMode}`,
+    `attachmentsTotal: ${state.attachments.length}`,
+    `speechTeacher: ${JSON.stringify(state.speech.teacher)}`,
+    `speechStudent: ${JSON.stringify(state.speech.student)}`,
+    `activeUsers: ${state.collaboration.activeUsers.join(',')}`,
+    `selectedObjectByUser: ${JSON.stringify(state.collaboration.selectedObjectByUser)}`,
     `pendingOperations: ${state.collaboration.pendingOperations.join(',') || 'none'}`
   ];
   const root = document.getElementById('debugList');
@@ -279,6 +396,7 @@ export function createRenderAll() {
   return function renderAll() {
     renderBoardHints();
     renderCapabilitySummary();
+    renderWhiteboardTools(renderAll);
     renderSharedSurface();
     renderWhiteboardObjects(renderAll);
     renderInspector();
@@ -286,6 +404,7 @@ export function createRenderAll() {
     renderHub();
     renderChat('teacherChatLog', state.teacherMessages);
     renderChat('studentChatLog', state.studentMessages);
+    renderStudentStatusTags();
     renderTeacherControlTabs(() => renderTeacherControlBody(renderAll));
     renderTeacherControlBody(renderAll);
     renderDebugPanel();
@@ -307,6 +426,7 @@ export function initUi(renderAll) {
   wireSpeech();
   wireSurfaceActions(renderAll);
   wireInspectorActions(renderAll);
+  wireStudentActions(renderAll);
   renderToolbarGroup('toolbarAudioVideo', messages.toolbarGroups.audioVideo);
   renderToolbarGroup('toolbarTeaching', messages.toolbarGroups.teachingTools);
   renderToolbarGroup('toolbarParticipation', messages.toolbarGroups.participation);

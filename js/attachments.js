@@ -33,12 +33,14 @@ export function mockUploadAttachment(sourceContext, listType) {
   const att = createAttachment({ type, sourceContext, name: type === ATTACHMENT.IMAGE ? 'diagram.png' : 'lesson-notes.pdf', metadata: { sizeLabel: type === ATTACHMENT.IMAGE ? 'mock 210KB' : 'mock 540KB' } });
   if (listType === 'teacher') state.teacherMessages.push({ role: 'user', text: 'Uploaded attachment', attachments: [att.attachmentId] });
   if (listType === 'student') state.studentMessages.push({ role: 'user', text: 'Uploaded attachment', attachments: [att.attachmentId] });
-  if (listType === 'public') state.hubContent['Group Chat'].push({ text: `Attachment shared: ${att.name}`, attachments: [att.attachmentId] });
+  if (listType === 'public') state.hubContent.Shares.push({ text: `Attachment shared: ${att.name} • Approved`, attachments: [att.attachmentId] });
+  return att;
 }
 
 export function mockPasteAttachment(sourceContext, listType) {
   const att = createAttachment({ type: ATTACHMENT.IMAGE, sourceContext, name: 'pasted-image.png', metadata: { sizeLabel: 'mock 180KB' } });
   if (listType === 'teacher') state.teacherMessages.push({ role: 'user', text: 'Pasted image', attachments: [att.attachmentId] });
   if (listType === 'student') state.studentMessages.push({ role: 'user', text: 'Pasted image', attachments: [att.attachmentId] });
-  if (listType === 'public') state.hubContent['Group Chat'].push({ text: `Pasted to public hub: ${att.name}`, attachments: [att.attachmentId] });
+  if (listType === 'public') state.hubContent.Shares.push({ text: `Pasted to public hub: ${att.name} • Approved`, attachments: [att.attachmentId] });
+  return att;
 }
