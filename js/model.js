@@ -38,6 +38,7 @@ export const state = {
   teacherAiAnswer: "AI Suggestion: Use momentum diagrams then compare pre/post vectors.", studentAiAnswer: "Student Hint: First identify system boundaries before equations.",
   teacherMessages: [{ role: "ai", text: "Need help preparing the next explanation?", attachments: [] }],
   studentMessages: [{ role: "ai", text: "Select an object and I can explain it.", attachments: [] }],
+  studentRequestNotice: "",
   studentRequests: [],
   hubContent: { "Chat": ["student4: Great explanation!", "student1: Thanks!", "Koi: Let's review the next problem."], "Shares": ["student1 shared: Study Notes.pdf • Approved", "student3 shared: My AI Discussion • Approved", "student2 shared: Geometry Diagram.jpg • Approved"], "Hand Raises": ["student3: annotate the equation?"] },
   whiteboardPermissions: [

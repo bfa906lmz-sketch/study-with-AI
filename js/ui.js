@@ -565,6 +565,16 @@ function renderStudentStatusTags() {
   }).join('');
 }
 
+function setStudentRequestNotice(text = '') {
+  state.studentRequestNotice = text;
+}
+
+function renderStudentRequestNotice() {
+  const el = document.getElementById('studentRequestNotice');
+  if (!el) return;
+  el.textContent = state.studentRequestNotice || '';
+}
+
 function formatRequestStatusLabel(status) {
   const map = {
     [REQUEST_STATUS.DRAFT]: 'Draft',
@@ -608,30 +618,45 @@ function wireStudentActions(renderAll) {
   };
 
   document.getElementById('studentRequestUploadBtn').onclick = () => {
-    upsertStudentRequest({ requestType: REQUEST_TYPE.UPLOAD });
+    const request = upsertStudentRequest({ requestType: REQUEST_TYPE.UPLOAD });
+    setStudentRequestNotice(request.target?.attachmentId
+      ? 'Upload request drafted with current attachment context.'
+      : 'Upload request drafted. Add content via Paste to include upload context.');
     renderAll();
   };
 
   document.getElementById('studentShareBtn').onclick = () => {
+    const hasChatContext = state.studentMessages.some((message) => message.role === 'user');
+    if (!hasChatContext) {
+      setStudentRequestNotice('No AI chat context yet. Ask AI first, then share chat.');
+      renderAll();
+      return;
+    }
     upsertStudentRequest({ requestType: REQUEST_TYPE.SHARE_AI_CHAT });
+    setStudentRequestNotice('AI chat share request drafted.');
     renderAll();
   };
 
   document.getElementById('studentRequestWhiteboardBtn').onclick = () => {
     upsertStudentRequest({ requestType: REQUEST_TYPE.WHITEBOARD_ACCESS });
+    setStudentRequestNotice('Whiteboard access request drafted.');
     renderAll();
   };
 
   document.getElementById('studentShareNotesBtn').onclick = () => {
     upsertStudentRequest({ requestType: REQUEST_TYPE.SHARE_NOTES });
+    setStudentRequestNotice('Notes share request drafted.');
     renderAll();
   };
 
   document.getElementById('studentSubmitRequestBtn').onclick = () => {
     const submitted = submitStudentDraftRequests();
     if (!submitted) {
-      upsertStudentRequest({ requestType: REQUEST_TYPE.UPLOAD, nextStatus: REQUEST_STATUS.PENDING });
+      setStudentRequestNotice('No draft requests to submit yet. Create a request first.');
+      renderAll();
+      return;
     }
+    setStudentRequestNotice(`${submitted} request${submitted > 1 ? 's' : ''} submitted for teacher review.`);
     renderAll();
   };
 }
@@ -708,6 +733,7 @@ export function createRenderAll() {
     renderChat('teacherChatLog', state.teacherMessages);
     renderChat('studentChatLog', state.studentMessages);
     renderStudentStatusTags();
+    renderStudentRequestNotice();
     renderRequestCenter();
     renderTeacherControlTabs(() => renderTeacherControlBody(renderAll));
     renderTeacherControlBody(renderAll);
