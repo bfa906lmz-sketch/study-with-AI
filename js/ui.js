@@ -253,23 +253,34 @@ function revokeWhiteboardAccessFromRequest(request) {
 }
 
 function applyApprovalEffectsFromCanonicalRequests() {
+  const requestIds = new Set(state.studentRequests.map((request) => request.requestId));
+
+  // Cleanup orphan request-derived artifacts to keep startup baseline deterministic.
+  state.hubContent.Shares = state.hubContent.Shares.filter((entry) => (
+    !(typeof entry === 'object' && entry.requestId && !requestIds.has(entry.requestId))
+  ));
+  state.whiteboardPermissions = state.whiteboardPermissions.filter((perm) => !(perm.sourceRequestId && !requestIds.has(perm.sourceRequestId)));
+
   state.studentRequests.forEach((request) => {
     const canRouteShare = [REQUEST_TYPE.SHARE_AI_CHAT, REQUEST_TYPE.SHARE_NOTES].includes(request.type)
       || (request.type === REQUEST_TYPE.UPLOAD && (request.target?.attachmentId || request.target?.attachmentName));
 
-    if (request.status === REQUEST_STATUS.APPROVED) {
+    const isTeacherApproved = request.status === REQUEST_STATUS.APPROVED && !!request.reviewedBy && !!request.reviewedAt;
+    const isTeacherRevoked = request.status === REQUEST_STATUS.REVOKED && !!request.revokedBy && !!request.revokedAt;
+
+    if (isTeacherApproved) {
       if (canRouteShare) upsertHubShareEntryForRequest(request, 'Approved');
       ensureWhiteboardAccessFromRequest(request);
       return;
     }
 
-    if (request.status === REQUEST_STATUS.REVOKED) {
+    if (isTeacherRevoked) {
       if (canRouteShare) upsertHubShareEntryForRequest(request, 'Revoked');
       revokeWhiteboardAccessFromRequest(request);
       return;
     }
 
-    // draft / pending / rejected should not publish shares or keep approval effects active
+    // draft / pending / rejected / unreviewed-approved should not publish shares or keep approval effects active
     removeHubShareEntryForRequest(request.requestId);
     revokeWhiteboardAccessFromRequest(request);
   });
