@@ -1,4 +1,4 @@
-import { ROLE, PERMISSION, SCOPE, ATTACHMENT, COLLAB_STATE, messages, state, getUser } from './model.js';
+import { ROLE, PERMISSION, SCOPE, ATTACHMENT, COLLAB_STATE, REQUEST_TYPE, REQUEST_STATUS, messages, state, getUser, uid, now } from './model.js';
 import { canEditBoard, canViewBoard, canInspectSelection, canAnnotateRegion, canEditRegion, canOperateOnObject } from './permissions.js';
 import { findObject, selectObject, annotateFromUser, aiInsertSummaryObject } from './whiteboard.js';
 import { createGrantSession, endGrantSession, rollbackSelectedObject, rollbackGrantSession, restoreTeacherBaseline, selectedObjectGovernanceInfo } from './collaboration.js';
@@ -164,9 +164,173 @@ function renderTeacherControlTabs(renderTeacherControlBody) {
   });
 }
 
+function summarizeRequestTarget(request) {
+  const target = request.target || {};
+  if (request.type === REQUEST_TYPE.UPLOAD) return target.attachmentName || 'Student workspace upload';
+  if (request.type === REQUEST_TYPE.WHITEBOARD_ACCESS) return `${target.boardId || state.boardId} / ${target.regionId || 'board'}`;
+  if (request.type === REQUEST_TYPE.SHARE_AI_CHAT) return target.preview || 'Current AI chat context';
+  if (request.type === REQUEST_TYPE.SHARE_NOTES) return target.preview || 'Current private notes';
+  return target.key || 'request-target';
+}
+
+function transitionStudentRequestStatus(requestId, nextStatus, decisionReason = '') {
+  if (state.currentRole !== ROLE.TEACHER) return false;
+  const request = state.studentRequests.find((item) => item.requestId === requestId);
+  if (!request) return false;
+
+  const validTransition =
+    (request.status === REQUEST_STATUS.PENDING && [REQUEST_STATUS.APPROVED, REQUEST_STATUS.REJECTED].includes(nextStatus))
+    || (request.status === REQUEST_STATUS.APPROVED && nextStatus === REQUEST_STATUS.REVOKED);
+
+  if (!validTransition) return false;
+
+  const updatedAt = now();
+  request.status = nextStatus;
+  request.updatedAt = updatedAt;
+  if (nextStatus === REQUEST_STATUS.REVOKED) {
+    request.revokedBy = state.currentUserId;
+    request.revokedAt = updatedAt;
+  } else {
+    request.reviewedBy = state.currentUserId;
+    request.reviewedAt = updatedAt;
+  }
+  request.decisionReason = decisionReason || '';
+  request.history.push({ status: nextStatus, at: updatedAt, actorId: state.currentUserId, reason: request.decisionReason || null });
+  return true;
+}
+
+
+function upsertHubShareEntryForRequest(request, statusLabel = 'Approved') {
+  const shares = state.hubContent.Shares;
+  const existing = shares.find((entry) => typeof entry === 'object' && entry.requestId === request.requestId);
+  const ownerName = getUser(request.ownerId).name;
+  const typeLabel = studentRequestTypeLabel(request.type);
+  const text = `${ownerName} shared: ${typeLabel} • ${statusLabel}`;
+  if (existing) {
+    existing.text = text;
+    existing.status = statusLabel.toLowerCase();
+    existing.updatedAt = now();
+    if (!existing.shareId) existing.shareId = uid('share');
+    request.routedShareEntryId = existing.shareId;
+    return existing;
+  }
+  const created = { shareId: uid('share'), requestId: request.requestId, text, attachments: [], status: statusLabel.toLowerCase(), updatedAt: now() };
+  shares.push(created);
+  request.routedShareEntryId = created.shareId;
+  return created;
+}
+
+function removeHubShareEntryForRequest(requestId) {
+  state.hubContent.Shares = state.hubContent.Shares.filter((entry) => !(typeof entry === 'object' && entry.requestId === requestId));
+}
+
+function ensureWhiteboardAccessFromRequest(request) {
+  if (request.type !== REQUEST_TYPE.WHITEBOARD_ACCESS || request.status !== REQUEST_STATUS.APPROVED) return;
+  const existingPerm = request.appliedPermissionId ? state.whiteboardPermissions.find((perm) => perm.id === request.appliedPermissionId) : null;
+  if (existingPerm) {
+    existingPerm.active = true;
+    return;
+  }
+  const permId = uid('perm');
+  state.whiteboardPermissions.push({
+    id: permId,
+    targetType: 'student',
+    targetIds: [request.ownerId],
+    permissionType: PERMISSION.ANNOTATE,
+    scopeLevel: SCOPE.REGION,
+    targetRegionId: request.target?.regionId || 'region-a',
+    active: true,
+    grantSessionId: null,
+    sourceRequestId: request.requestId
+  });
+  request.appliedPermissionId = permId;
+}
+
+function revokeWhiteboardAccessFromRequest(request) {
+  if (!request.appliedPermissionId) return;
+  const perm = state.whiteboardPermissions.find((item) => item.id === request.appliedPermissionId);
+  if (perm) perm.active = false;
+}
+
+function applyApprovalEffectsFromCanonicalRequests() {
+  state.studentRequests.forEach((request) => {
+    const canRouteShare = [REQUEST_TYPE.SHARE_AI_CHAT, REQUEST_TYPE.SHARE_NOTES].includes(request.type)
+      || (request.type === REQUEST_TYPE.UPLOAD && (request.target?.attachmentId || request.target?.attachmentName));
+
+    if (request.status === REQUEST_STATUS.APPROVED) {
+      if (canRouteShare) upsertHubShareEntryForRequest(request, 'Approved');
+      ensureWhiteboardAccessFromRequest(request);
+      return;
+    }
+
+    if (request.status === REQUEST_STATUS.REVOKED) {
+      if (canRouteShare) upsertHubShareEntryForRequest(request, 'Revoked');
+      revokeWhiteboardAccessFromRequest(request);
+      return;
+    }
+
+    // draft / pending / rejected should not publish shares or keep approval effects active
+    removeHubShareEntryForRequest(request.requestId);
+    revokeWhiteboardAccessFromRequest(request);
+  });
+}
+
+function wireTeacherApprovalQueueActions(renderAll) {
+  const body = document.getElementById('teacherControlBody');
+  body.querySelectorAll('[data-request-action]').forEach((btn) => {
+    btn.onclick = () => {
+      const requestId = btn.dataset.requestId;
+      const action = btn.dataset.requestAction;
+      const nextStatus = action === 'approve' ? REQUEST_STATUS.APPROVED : action === 'reject' ? REQUEST_STATUS.REJECTED : REQUEST_STATUS.REVOKED;
+      const defaultReason = action === 'reject' ? 'Teacher rejected request' : action === 'revoke' ? 'Teacher revoked approved request' : 'Teacher approved request';
+      transitionStudentRequestStatus(requestId, nextStatus, defaultReason);
+      renderAll();
+    };
+  });
+}
+
 function renderTeacherControlBody(renderAll) {
   const body = document.getElementById('teacherControlBody');
   if (state.currentRole !== ROLE.TEACHER) { body.innerHTML = '<p>Teacher-only panel</p>'; return; }
+  if (state.activeTeacherControlTab === 'Approval Queue') {
+    const queue = [...state.studentRequests].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    if (!queue.length) {
+      body.innerHTML = '<p>No student requests in queue yet.</p>';
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="approval-queue">
+        ${queue.map((request) => {
+          const owner = getUser(request.ownerId).name;
+          const statusLabel = formatRequestStatusLabel(request.status);
+          const timeLabel = new Date(request.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const canApproveOrReject = request.status === REQUEST_STATUS.PENDING;
+          const canRevoke = request.status === REQUEST_STATUS.APPROVED;
+          return `
+            <div class="approval-row">
+              <div class="approval-main">
+                <strong>${owner}</strong>
+                <span>${studentRequestTypeLabel(request.type)}</span>
+                <span class="approval-target">${summarizeRequestTarget(request)}</span>
+              </div>
+              <div class="approval-meta">
+                <span class="status-tag ${request.status}">${statusLabel}</span>
+                <span class="request-time">${timeLabel}</span>
+              </div>
+              <div class="approval-actions">
+                ${canApproveOrReject ? `<button type="button" data-request-action="approve" data-request-id="${request.requestId}">Approve</button><button type="button" data-request-action="reject" data-request-id="${request.requestId}" class="secondary">Reject</button>` : ''}
+                ${canRevoke ? `<button type="button" data-request-action="revoke" data-request-id="${request.requestId}" class="danger">Revoke</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    wireTeacherApprovalQueueActions(renderAll);
+    return;
+  }
+
   if (state.activeTeacherControlTab === 'Audit') {
     const info = selectedObjectGovernanceInfo(findObject);
     body.innerHTML = info ? `<ul class="simple-list"><li>object source: ${info.source}</li><li>owner: ${info.owner}</li><li>source grant session: ${info.sourceGrantSession}</li><li>current lock/editor: ${info.lockEditor}</li><li>latest operation: ${info.latestOperation}</li><li>governance action: ${info.action}</li></ul>` : '<p>Select an object to inspect governance audit context.</p>';
@@ -271,32 +435,155 @@ function wireInspectorActions(renderAll) {
   };
 }
 
-function setStudentStatus(statusKey) {
-  state.studentActionStatus = [statusKey];
+function getStudentRequestTarget(requestType, ownerId) {
+  if (requestType === REQUEST_TYPE.UPLOAD) {
+    const latestAttachment = [...state.attachments].reverse().find((a) => a.createdBy === ownerId && a.sourceContext === 'student-workspace') || null;
+    return {
+      key: latestAttachment ? latestAttachment.attachmentId : 'student-workspace-upload',
+      sourceContext: 'student-workspace',
+      attachmentId: latestAttachment?.attachmentId || null,
+      attachmentName: latestAttachment?.name || null
+    };
+  }
+
+  if (requestType === REQUEST_TYPE.WHITEBOARD_ACCESS) {
+    return {
+      key: `board:${state.boardId}:region-a:annotate`,
+      boardId: state.boardId,
+      regionId: 'region-a',
+      permissionType: PERMISSION.ANNOTATE
+    };
+  }
+
+  if (requestType === REQUEST_TYPE.SHARE_AI_CHAT) {
+    const latestMessageIndex = [...state.studentMessages].map((message, index) => ({ message, index })).reverse().find(({ message }) => message.role === 'user')?.index ?? null;
+    return {
+      key: latestMessageIndex !== null ? `student-chat-${latestMessageIndex}` : 'student-chat-latest',
+      conversationOwnerId: ownerId,
+      messageIndex: latestMessageIndex,
+      preview: latestMessageIndex !== null ? state.studentMessages[latestMessageIndex].text.slice(0, 80) : ''
+    };
+  }
+
+  const latestNote = [...state.privateNotes].reverse().find((note) => note.userId === ownerId) || null;
+  return {
+    key: latestNote ? latestNote.noteId : 'private-notes-latest',
+    noteId: latestNote?.noteId || null,
+    attachmentId: latestNote?.attachmentId || null,
+    preview: latestNote?.text || 'Share most recent private note'
+  };
+}
+
+function upsertStudentRequest({ requestType, ownerId = state.currentUserId, nextStatus = REQUEST_STATUS.DRAFT }) {
+  const target = getStudentRequestTarget(requestType, ownerId);
+  const request = state.studentRequests.find((item) => item.ownerId === ownerId && item.type === requestType && item.target?.key === target.key);
+  if (request) {
+    request.target = target;
+    request.status = nextStatus;
+    request.updatedAt = now();
+    request.reviewedBy = nextStatus === REQUEST_STATUS.DRAFT ? null : request.reviewedBy || null;
+    request.reviewedAt = nextStatus === REQUEST_STATUS.DRAFT ? null : request.reviewedAt || null;
+    request.revokedBy = nextStatus === REQUEST_STATUS.DRAFT ? null : request.revokedBy || null;
+    request.revokedAt = nextStatus === REQUEST_STATUS.DRAFT ? null : request.revokedAt || null;
+    request.decisionReason = nextStatus === REQUEST_STATUS.DRAFT ? '' : request.decisionReason || '';
+    request.routedShareEntryId = nextStatus === REQUEST_STATUS.DRAFT ? null : request.routedShareEntryId || null;
+    request.appliedPermissionId = nextStatus === REQUEST_STATUS.DRAFT ? null : request.appliedPermissionId || null;
+    request.history.push({ status: nextStatus, at: request.updatedAt, actorId: ownerId });
+    return request;
+  }
+
+  const createdAt = now();
+  const created = {
+    requestId: uid('req'),
+    ownerId,
+    type: requestType,
+    status: nextStatus,
+    createdAt,
+    updatedAt: createdAt,
+    target,
+    reviewedBy: null,
+    reviewedAt: null,
+    revokedBy: null,
+    revokedAt: null,
+    decisionReason: '',
+    routedShareEntryId: null,
+    appliedPermissionId: null,
+    history: [{ status: nextStatus, at: createdAt, actorId: ownerId }]
+  };
+  state.studentRequests.push(created);
+  return created;
+}
+
+function submitStudentDraftRequests(ownerId = state.currentUserId) {
+  let updated = 0;
+  state.studentRequests.forEach((request) => {
+    if (request.ownerId !== ownerId || request.status !== REQUEST_STATUS.DRAFT) return;
+    request.status = REQUEST_STATUS.PENDING;
+    request.updatedAt = now();
+    request.history.push({ status: REQUEST_STATUS.PENDING, at: request.updatedAt, actorId: ownerId });
+    updated += 1;
+  });
+  return updated;
+}
+
+function studentRequestTypeLabel(type) {
+  const labels = {
+    [REQUEST_TYPE.UPLOAD]: 'Request Upload',
+    [REQUEST_TYPE.WHITEBOARD_ACCESS]: 'Request Whiteboard Access',
+    [REQUEST_TYPE.SHARE_AI_CHAT]: 'Share AI Chat',
+    [REQUEST_TYPE.SHARE_NOTES]: 'Share Notes'
+  };
+  return labels[type] || type;
 }
 
 function renderStudentStatusTags() {
   const root = document.getElementById('studentStatusTags');
+  const myRequests = state.studentRequests.filter((request) => request.ownerId === state.currentUserId);
+  const statuses = new Set(myRequests.map((request) => request.status));
   const map = {
-    pending: { cls: 'pending', label: messages.studentStatusPendingReview },
-    shared: { cls: 'shared', label: messages.studentStatusSharedToClass },
-    granted: { cls: 'granted', label: messages.studentStatusAccessGranted },
-    rejected: { cls: 'rejected', label: messages.studentStatusRejected }
+    [REQUEST_STATUS.DRAFT]: { cls: 'draft', label: 'Draft' },
+    [REQUEST_STATUS.PENDING]: { cls: 'pending', label: messages.studentStatusPendingReview },
+    [REQUEST_STATUS.APPROVED]: { cls: 'approved', label: messages.studentStatusAccessGranted },
+    [REQUEST_STATUS.REJECTED]: { cls: 'rejected', label: messages.studentStatusRejected },
+    [REQUEST_STATUS.REVOKED]: { cls: 'revoked', label: 'Revoked' }
   };
-
-  const statuses = new Set(state.studentActionStatus || []);
-  if (canEditBoard() || canAnnotateRegion('region-a')) statuses.add('granted');
-  const hasApprovedStudentShare = (state.hubContent.Shares || []).some((entry) => {
-    const text = typeof entry === 'string' ? entry : entry.text;
-    return text.includes('student3 shared:') && text.includes('Approved');
-  });
-  if (hasApprovedStudentShare) statuses.add('shared');
 
   root.innerHTML = [...statuses].map((status) => {
     const item = map[status];
-    if (!item) return '';
-    return `<span class="status-tag ${item.cls}">${item.label}</span>`;
+    return item ? `<span class="status-tag ${item.cls}">${item.label}</span>` : '';
   }).join('');
+}
+
+function formatRequestStatusLabel(status) {
+  const map = {
+    [REQUEST_STATUS.DRAFT]: 'Draft',
+    [REQUEST_STATUS.PENDING]: 'Pending',
+    [REQUEST_STATUS.APPROVED]: 'Approved',
+    [REQUEST_STATUS.REJECTED]: 'Rejected',
+    [REQUEST_STATUS.REVOKED]: 'Revoked'
+  };
+  return map[status] || status;
+}
+
+function renderRequestCenter() {
+  const root = document.getElementById('studentRequestCenter');
+  if (!root) return;
+  const myRequests = [...state.studentRequests]
+    .filter((request) => request.ownerId === state.currentUserId)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+  if (!myRequests.length) {
+    root.innerHTML = '<p class="request-center-empty">No active requests yet.</p>';
+    return;
+  }
+
+  root.innerHTML = myRequests.slice(0, 4).map((request) => `
+    <div class="request-center-item">
+      <span class="request-title">${studentRequestTypeLabel(request.type)}</span>
+      <span class="status-tag ${request.status}">${formatRequestStatusLabel(request.status)}</span>
+      <span class="request-time">${new Date(request.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+    </div>
+  `).join('');
 }
 
 function wireStudentActions(renderAll) {
@@ -310,26 +597,30 @@ function wireStudentActions(renderAll) {
   };
 
   document.getElementById('studentRequestUploadBtn').onclick = () => {
-    setStudentStatus('pending');
-    state.hubContent['Hand Raises'].push('student3 requested upload access • Pending Review');
+    upsertStudentRequest({ requestType: REQUEST_TYPE.UPLOAD });
     renderAll();
   };
 
   document.getElementById('studentShareBtn').onclick = () => {
-    mockPasteAttachment('student-workspace', 'student');
-    setStudentStatus('pending');
+    upsertStudentRequest({ requestType: REQUEST_TYPE.SHARE_AI_CHAT });
+    renderAll();
+  };
+
+  document.getElementById('studentRequestWhiteboardBtn').onclick = () => {
+    upsertStudentRequest({ requestType: REQUEST_TYPE.WHITEBOARD_ACCESS });
+    renderAll();
+  };
+
+  document.getElementById('studentShareNotesBtn').onclick = () => {
+    upsertStudentRequest({ requestType: REQUEST_TYPE.SHARE_NOTES });
     renderAll();
   };
 
   document.getElementById('studentSubmitRequestBtn').onclick = () => {
-    const prepared = state.attachments.filter((a) => a.sourceContext === 'student-workspace').slice(-1)[0];
-    if (!prepared) {
-      setStudentStatus('rejected');
-      renderAll();
-      return;
+    const submitted = submitStudentDraftRequests();
+    if (!submitted) {
+      upsertStudentRequest({ requestType: REQUEST_TYPE.UPLOAD, nextStatus: REQUEST_STATUS.PENDING });
     }
-    state.hubContent.Shares.push({ text: `student3 shared: ${prepared.name} • Pending Review`, attachments: [prepared.attachmentId] });
-    setStudentStatus('pending');
     renderAll();
   };
 }
@@ -394,6 +685,7 @@ function renderDebugPanel() {
 
 export function createRenderAll() {
   return function renderAll() {
+    applyApprovalEffectsFromCanonicalRequests();
     renderBoardHints();
     renderCapabilitySummary();
     renderWhiteboardTools(renderAll);
@@ -405,6 +697,7 @@ export function createRenderAll() {
     renderChat('teacherChatLog', state.teacherMessages);
     renderChat('studentChatLog', state.studentMessages);
     renderStudentStatusTags();
+    renderRequestCenter();
     renderTeacherControlTabs(() => renderTeacherControlBody(renderAll));
     renderTeacherControlBody(renderAll);
     renderDebugPanel();
