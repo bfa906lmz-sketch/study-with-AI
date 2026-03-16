@@ -94,6 +94,13 @@ function canUseTool(tool) {
 function renderWhiteboardTools(renderAll) {
   const root = document.getElementById('whiteboardTools');
   root.innerHTML = '';
+
+  if (!canUseTool(state.currentTool)) {
+    state.currentTool = 'Select';
+    state.collaboration.activeToolByUser[state.currentUserId] = 'Select';
+    state.collaboration.interactionStateByUser[state.currentUserId] = COLLAB_STATE.VIEWING;
+  }
+
   messages.whiteboardTools.forEach((tool) => {
     const btn = document.createElement('button');
     const enabled = canUseTool(tool);
@@ -627,13 +634,10 @@ function wireStudentActions(renderAll) {
 
   document.getElementById('studentShareBtn').onclick = () => {
     const hasChatContext = state.studentMessages.some((message) => message.role === 'user');
-    if (!hasChatContext) {
-      setStudentRequestNotice('No AI chat context yet. Ask AI first, then share chat.');
-      renderAll();
-      return;
-    }
     upsertStudentRequest({ requestType: REQUEST_TYPE.SHARE_AI_CHAT });
-    setStudentRequestNotice('AI chat share request drafted.');
+    setStudentRequestNotice(hasChatContext
+      ? 'AI chat share request drafted.'
+      : 'AI chat share request drafted without message context. Ask AI to attach richer context.');
     renderAll();
   };
 
