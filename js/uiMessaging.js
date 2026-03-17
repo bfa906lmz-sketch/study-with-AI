@@ -52,8 +52,9 @@ export function wireChat(formId, inputId, list, logId) {
 }
 
 function normalizeHubEntry(entry) {
-  if (typeof entry === 'string') return { text: entry, attachments: [] };
-  return { text: entry.text || '', attachments: entry.attachments || [] };
+  if (typeof entry === 'string') return { text: entry, attachments: [], source: 'seeded' };
+  const source = entry.requestId ? 'runtime-request' : (entry.source || 'runtime');
+  return { text: entry.text || '', attachments: entry.attachments || [], source };
 }
 
 function renderHubComposer() {
@@ -81,11 +82,22 @@ export function renderHub() {
 
   const root = document.getElementById('hubActiveList');
   root.innerHTML = '';
-  (state.hubContent[state.activeHubTab] || []).forEach((entry) => {
-    const normalized = normalizeHubEntry(entry);
+  const list = state.hubContent[state.activeHubTab] || [];
+  const normalizedList = list.map(normalizeHubEntry);
+  const sorted = state.activeHubTab === 'Shares'
+    ? normalizedList.sort((a, b) => {
+      const rank = (item) => item.source === 'runtime-request' ? 0 : (item.source === 'runtime' ? 1 : 2);
+      return rank(a) - rank(b);
+    })
+    : normalizedList;
+
+  sorted.forEach((normalized) => {
     const li = document.createElement('li');
-    li.className = 'hub-entry';
-    li.innerHTML = buildMessageHtml(normalized, 'ai');
+    li.className = `hub-entry ${normalized.source === 'runtime-request' ? 'runtime-share' : ''}`;
+    const prefix = state.activeHubTab === 'Shares'
+      ? (normalized.source === 'runtime-request' ? '[Current Request] ' : (normalized.source === 'seeded' ? '[Seeded] ' : ''))
+      : '';
+    li.innerHTML = buildMessageHtml({ ...normalized, text: `${prefix}${normalized.text}` }, 'ai');
     root.appendChild(li);
   });
 

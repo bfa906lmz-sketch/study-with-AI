@@ -1030,3 +1030,34 @@ body.role-teacher .column-center { grid-template-rows: 1fr; }
   padding: 3px 8px;
   font-size: 10px;
 }
+
+
+/* Phase 4 integration readability: keep teacher governance and queue scrollable */
+.teacher-governance {
+  overflow: hidden;
+}
+
+#teacherControlBody {
+  min-height: 0;
+  overflow: auto;
+  max-height: 100%;
+}
+
+/* Prevent bottom toolbar from clipping long teacher queue content */
+body.role-teacher .classroom-layout {
+  min-height: 0;
+}
+
+body.role-teacher .column-left {
+  grid-template-rows: minmax(0, 72fr) minmax(0, 28fr);
+}
+
+body.role-teacher .teacher-governance {
+  min-height: 0;
+}
+
+/* Runtime-request shares should stand out from seeded mock entries */
+.hub-entry.runtime-share .chat-message {
+  border-color: rgba(52, 211, 153, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.25);
+}
