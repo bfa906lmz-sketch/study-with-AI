@@ -7,10 +7,24 @@ export const SURFACE = { TEACHER_SCREEN: "teacher-screen", STUDENT_SCREEN: "stud
 export const COLLAB_STATE = {
   IDLE: "idle", VIEWING: "viewing", SELECTING: "selecting", ANNOTATING: "annotating", EDITING: "editing", PENDING_ROLLBACK: "pending-rollback", GRANT_ACTIVE: "grant-active", GRANT_ENDED: "grant-ended"
 };
+export const REQUEST_TYPE = {
+  UPLOAD: 'request-upload',
+  WHITEBOARD_ACCESS: 'request-whiteboard-access',
+  SHARE_AI_CHAT: 'share-ai-chat',
+  SHARE_NOTES: 'share-notes',
+  VIEW_PEER_AI_CHAT: 'request-view-peer-ai-chat'
+};
+export const REQUEST_STATUS = {
+  DRAFT: 'draft',
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  REVOKED: 'revoked'
+};
 
 export const messages = {
-  meetingTitle: "Advanced Physics — Live Class", meetingSubtitle: "Phase 4 • Multimodal input and shared surface modeling", classCode: "Class Code: PHY-402", teacherCamera: "Teacher Camera", liveStatus: "Live", teacherWorkspace: "Teacher ↔ AI Workspace", teacherAiAnswer: "Teacher AI Summary", sendToWhiteboard: "Send to Whiteboard", whiteboardAndLesson: "Whiteboard / Current Lesson", inspectPanel: "Object Inspector & Collaboration Cues", askAiAboutSelection: "Ask AI about selection", saveToPersonalNotes: "Save to personal notes", studentCameraGrid: "Student Camera Grid", cameraPanel: "Camera Panel", publicInteractionHub: "Public Interaction Hub", studentAiWorkspace: "Student AI Workspace", studentAiAnswer: "AI Answer (Student)", studentRaiseHand: "Raise Hand", studentRequestUpload: "Request Upload", studentShareToClass: "Share to Class", studentSubmitRequest: "Submit Request", studentMore: "More ▾", studentStatusPendingReview: "Pending Review", studentStatusSharedToClass: "Shared to Class", studentStatusAccessGranted: "Access Granted", studentStatusRejected: "Rejected", send: "Send", upload: "Upload", paste: "Paste", micStart: "🎙 Start", micStop: "⏹ Stop", sharedSurfaceTitle: "Live Shared Surface (Mock)", copySnapshot: "Copy Snapshot", insertSnapshotToWhiteboard: "To Whiteboard", sendSnapshotToChat: "To AI Chat", saveSnapshotToNotes: "To Notes", presentationModeOff: "Presentation: Off", presentationModeOn: "Presentation: On", teacherInputPlaceholder: "Ask AI as teacher...", studentInputPlaceholder: "Ask AI as student...", teacherControls: "Teacher Whiteboard Governance", runPhase4Flow: "Run Phase 4 Demo Flow", debugPanelTitle: "Developer Debug State", publicLayerHint: "Public classroom layer • visible to all participants", teacherOnlyHint: "Teacher capability layer • restricted controls", studentPrivateHint: "Student private layer • visible to this student only", publicSharedHint: "Shared stage: selecting/editing here affects classroom content.", publicInteractionHint: "Public interaction stream visible to all participants.", publicChatPlaceholder: "Message class...",
-  whiteboardTabs: ["Whiteboard", "Lesson Content", "AI Outline", "Summary"], whiteboardTools: ["Select", "Annotate", "Move", "Erase", "Pointer"], teacherQuickActions: ["Generate opening question", "Generate outline", "Generate exercises", "Summarize lesson"], hubTabs: ["Chat", "Shares", "Hand Raises"], teacherControlTabs: ["Audit", "Grant Sessions", "Operations", "Rollback"], roleSwitcher: { teacher: "Teacher View", student: "Student View" },
+  meetingTitle: "Advanced Physics — Live Class", meetingSubtitle: "Phase 4 • Multimodal input and shared surface modeling", classCode: "Class Code: PHY-402", teacherCamera: "Teacher Camera", liveStatus: "Live", teacherWorkspace: "Teacher ↔ AI Workspace", teacherAiAnswer: "Teacher AI Summary", sendToWhiteboard: "Send to Whiteboard", whiteboardAndLesson: "Whiteboard / Current Lesson", inspectPanel: "Object Inspector & Collaboration Cues", askAiAboutSelection: "Ask AI about selection", saveToPersonalNotes: "Save to personal notes", studentCameraGrid: "Student Camera Grid", cameraPanel: "Camera Panel", publicInteractionHub: "Public Interaction Hub", studentAiWorkspace: "Student AI Workspace", studentAiAnswer: "AI Answer (Student)", studentRaiseHand: "Raise Hand", studentRequestUpload: "Request Upload", studentRequestWhiteboardAccess: "Request Whiteboard Access", studentShareToClass: "Share AI Chat", studentShareNotes: "Share Notes", studentRequestPeerAiChat: "Request Peer AI Chat", studentOpenPeerAiChat: "Open Peer AI", studentClosePeerAiChat: "Close Peer AI", studentPeerAiApproved: "Approved peer AI access", studentSubmitRequest: "Submit Request", studentMore: "More ▾", studentStatusPendingReview: "Pending Review", studentStatusSharedToClass: "Shared to Class", studentStatusAccessGranted: "Approved", studentStatusRejected: "Rejected", send: "Send", upload: "Upload", paste: "Paste", micStart: "🎙 Start", micStop: "⏹ Stop", sharedSurfaceTitle: "Live Shared Surface (Mock)", copySnapshot: "Copy Snapshot", insertSnapshotToWhiteboard: "To Whiteboard", sendSnapshotToChat: "To AI Chat", saveSnapshotToNotes: "To Notes", presentationModeOff: "Presentation: Off", presentationModeOn: "Presentation: On", teacherInputPlaceholder: "Ask AI as teacher...", studentInputPlaceholder: "Ask AI as student...", teacherControls: "Teacher Whiteboard Governance", runPhase4Flow: "Run Phase 4 Demo Flow", debugPanelTitle: "Developer Debug State", publicLayerHint: "Public classroom layer • visible to all participants", teacherOnlyHint: "Teacher capability layer • restricted controls", studentPrivateHint: "Student private layer • visible to this student only", publicSharedHint: "Shared stage: selecting/editing here affects classroom content.", publicInteractionHint: "Public interaction stream visible to all participants.", publicChatPlaceholder: "Message class...",
+  whiteboardTabs: ["Whiteboard", "Lesson Content", "AI Outline", "Summary"], whiteboardTools: ["Select", "Annotate", "Move", "Erase", "Pointer"], teacherQuickActions: ["Generate opening question", "Generate outline", "Generate exercises", "Summarize lesson"], hubTabs: ["Chat", "Shares", "Hand Raises"], teacherControlTabs: ["Approval Queue", "Audit", "Grant Sessions", "Operations", "Rollback"], roleSwitcher: { teacher: "Teacher View", student: "Student View" },
   toolbarGroups: { audioVideo: ["Mute/Unmute", "Video On/Off", "Mute All"], teachingTools: ["Share Screen", "Whiteboard", "Record"], participation: ["Participants", "Chat", "Manage Hand Raises", "Polls", "Reactions"], session: ["Record to Cloud", "Breakout Rooms", "End Meeting"] }
 };
 
@@ -25,7 +39,14 @@ export const state = {
   teacherAiAnswer: "AI Suggestion: Use momentum diagrams then compare pre/post vectors.", studentAiAnswer: "Student Hint: First identify system boundaries before equations.",
   teacherMessages: [{ role: "ai", text: "Need help preparing the next explanation?", attachments: [] }],
   studentMessages: [{ role: "ai", text: "Select an object and I can explain it.", attachments: [] }],
-  studentActionStatus: [],
+  peerStudentMessages: {
+    "stu-ava": [{ role: "user", text: "Can you explain the collision example again?", attachments: [] }, { role: "ai", text: "Start by comparing system momentum before and after impact.", attachments: [] }],
+    "stu-liam": [{ role: "user", text: "What equation should I use for impulse?", attachments: [] }, { role: "ai", text: "Use impulse equals change in momentum for the chosen system.", attachments: [] }],
+    "stu-emma": [{ role: "user", text: "How do I organize my summary notes?", attachments: [] }, { role: "ai", text: "Group the key concepts by conservation laws, assumptions, and worked examples.", attachments: [] }]
+  },
+  peerAiViewer: { openRequestId: null, targetStudentId: null, denialReason: "" },
+  studentRequestNotice: "",
+  studentRequests: [],
   hubContent: { "Chat": ["student4: Great explanation!", "student1: Thanks!", "Koi: Let's review the next problem."], "Shares": ["student1 shared: Study Notes.pdf • Approved", "student3 shared: My AI Discussion • Approved", "student2 shared: Geometry Diagram.jpg • Approved"], "Hand Raises": ["student3: annotate the equation?"] },
   whiteboardPermissions: [
     { id: "perm-view", targetType: "class", targetIds: ["all"], permissionType: PERMISSION.VIEW, scopeLevel: SCOPE.BOARD, targetRegionId: null, active: true, grantSessionId: null },

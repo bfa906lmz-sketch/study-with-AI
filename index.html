@@ -99,7 +99,7 @@
             <p class="context-hint teacher" data-i18n="teacherOnlyHint"></p>
             <button id="runPhase4FlowBtn" class="flow-btn" data-i18n="runPhase4Flow"></button>
             <div class="segment-control" id="teacherControlTabs"></div>
-            <div id="teacherControlBody" class="card-soft"></div>
+            <div id="teacherControlBody" class="card-soft" data-queue-surface="teacher-approval"></div>
           </article>
         </section>
 
@@ -138,12 +138,25 @@
                   <div class="student-more-wrap">
                     <button type="button" id="studentMoreBtn" data-i18n="studentMore"></button>
                     <div class="student-more-menu hidden" id="studentMoreMenu">
+                      <button type="button" id="studentRequestWhiteboardBtn" data-i18n="studentRequestWhiteboardAccess"></button>
+                      <button type="button" id="studentShareNotesBtn" data-i18n="studentShareNotes"></button>
+                      <button type="button" id="studentRequestPeerAiBtn" data-i18n="studentRequestPeerAiChat"></button>
                       <button type="button" id="studentPasteBtn" data-i18n="paste"></button>
                       <button type="button" id="studentMicBtn" class="mic-btn" data-i18n="micStart"></button>
                     </div>
                   </div>
                 </div>
                 <div class="student-status-tags" id="studentStatusTags"></div>
+                <p class="student-request-notice" id="studentRequestNotice"></p>
+                <div class="student-request-center" id="studentRequestCenter"></div>
+                <div class="peer-ai-viewer card-soft hidden" id="peerAiViewerCard">
+                  <div class="panel-header">
+                    <h3 data-i18n="studentOpenPeerAiChat"></h3>
+                    <button type="button" id="closePeerAiViewerBtn" data-i18n="studentClosePeerAiChat"></button>
+                  </div>
+                  <p class="context-hint private" id="peerAiViewerStatus"></p>
+                  <div class="chat-log compact-log" id="peerAiViewerLog"></div>
+                </div>
               </div>
             </div>
           </article>
