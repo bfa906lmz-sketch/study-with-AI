@@ -177,7 +177,96 @@ function summarizeRequestTarget(request) {
   if (request.type === REQUEST_TYPE.WHITEBOARD_ACCESS) return `${target.boardId || state.boardId} / ${target.regionId || 'board'}`;
   if (request.type === REQUEST_TYPE.SHARE_AI_CHAT) return target.preview || 'Current AI chat context';
   if (request.type === REQUEST_TYPE.SHARE_NOTES) return target.preview || 'Current private notes';
+  if (request.type === REQUEST_TYPE.VIEW_PEER_AI_CHAT) return `${target.targetStudentName || target.targetStudentId} AI chat`;
   return target.key || 'request-target';
+}
+
+function getApprovedPeerAiRequestForUser(userId = state.currentUserId) {
+  return state.studentRequests.find((request) => (
+    request.type === REQUEST_TYPE.VIEW_PEER_AI_CHAT
+    && request.ownerId === userId
+    && request.status === REQUEST_STATUS.APPROVED
+    && !!request.reviewedBy
+    && !!request.reviewedAt
+  )) || null;
+}
+
+function canCurrentUserViewPeerAiChat(targetStudentId) {
+  const request = getApprovedPeerAiRequestForUser(state.currentUserId);
+  return !!request && request.target?.targetStudentId === targetStudentId;
+}
+
+function syncPeerAiViewerAccess() {
+  const viewer = state.peerAiViewer;
+  if (!viewer.openRequestId || !viewer.targetStudentId) {
+    viewer.denialReason = '';
+    return;
+  }
+  const request = state.studentRequests.find((item) => item.requestId === viewer.openRequestId);
+  const approved = request
+    && request.type === REQUEST_TYPE.VIEW_PEER_AI_CHAT
+    && request.status === REQUEST_STATUS.APPROVED
+    && !!request.reviewedBy
+    && !!request.reviewedAt
+    && request.target?.targetStudentId === viewer.targetStudentId;
+
+  if (!approved) {
+    viewer.denialReason = 'Peer AI access removed or not approved.';
+    viewer.openRequestId = null;
+    viewer.targetStudentId = null;
+  } else {
+    viewer.denialReason = '';
+  }
+}
+
+function renderPeerAiViewer() {
+  const card = document.getElementById('peerAiViewerCard');
+  const status = document.getElementById('peerAiViewerStatus');
+  const log = document.getElementById('peerAiViewerLog');
+  if (!card || !status || !log) return;
+
+  syncPeerAiViewerAccess();
+  const targetStudentId = state.peerAiViewer.targetStudentId;
+  const approved = targetStudentId && canCurrentUserViewPeerAiChat(targetStudentId);
+  card.classList.toggle('hidden', !approved);
+  if (!approved) {
+    log.innerHTML = '';
+    status.textContent = state.peerAiViewer.denialReason || '';
+    return;
+  }
+
+  const targetStudent = getUser(targetStudentId);
+  status.textContent = `${messages.studentPeerAiApproved}: ${targetStudent.name} • read-only`;
+  renderChat('peerAiViewerLog', state.peerStudentMessages[targetStudentId] || [{ role: 'ai', text: 'No peer AI messages available yet.', attachments: [] }]);
+}
+
+function wirePeerAiViewerActions(renderAll) {
+  const closeBtn = document.getElementById('closePeerAiViewerBtn');
+  if (closeBtn) closeBtn.onclick = () => {
+    state.peerAiViewer.openRequestId = null;
+    state.peerAiViewer.targetStudentId = null;
+    state.peerAiViewer.denialReason = '';
+    renderAll();
+  };
+
+  const root = document.getElementById('studentRequestCenter');
+  if (!root) return;
+  root.querySelectorAll('[data-open-peer-ai-request]').forEach((btn) => {
+    btn.onclick = () => {
+      const request = state.studentRequests.find((item) => item.requestId === btn.dataset.openPeerAiRequest);
+      if (!request || request.status !== REQUEST_STATUS.APPROVED || !request.target?.targetStudentId) {
+        state.peerAiViewer.openRequestId = null;
+        state.peerAiViewer.targetStudentId = null;
+        state.peerAiViewer.denialReason = 'Peer AI access is not approved.';
+        renderAll();
+        return;
+      }
+      state.peerAiViewer.openRequestId = request.requestId;
+      state.peerAiViewer.targetStudentId = request.target.targetStudentId;
+      state.peerAiViewer.denialReason = '';
+      renderAll();
+    };
+  });
 }
 
 function transitionStudentRequestStatus(requestId, nextStatus, decisionReason = '') {
@@ -483,6 +572,18 @@ function getStudentRequestTarget(requestType, ownerId) {
     };
   }
 
+  if (requestType === REQUEST_TYPE.VIEW_PEER_AI_CHAT) {
+    const targetStudentId = 'stu-ava';
+    const targetStudentName = getUser(targetStudentId).name;
+    return {
+      key: `peer-ai:${ownerId}:${targetStudentId}`,
+      requesterStudentId: ownerId,
+      targetStudentId,
+      targetStudentName,
+      conversationRef: 'student-ai-workspace'
+    };
+  }
+
   const latestNote = [...state.privateNotes].reverse().find((note) => note.userId === ownerId) || null;
   return {
     key: latestNote ? latestNote.noteId : 'private-notes-latest',
@@ -549,7 +650,8 @@ function studentRequestTypeLabel(type) {
     [REQUEST_TYPE.UPLOAD]: 'Request Upload',
     [REQUEST_TYPE.WHITEBOARD_ACCESS]: 'Request Whiteboard Access',
     [REQUEST_TYPE.SHARE_AI_CHAT]: 'Share AI Chat',
-    [REQUEST_TYPE.SHARE_NOTES]: 'Share Notes'
+    [REQUEST_TYPE.SHARE_NOTES]: 'Share Notes',
+    [REQUEST_TYPE.VIEW_PEER_AI_CHAT]: 'Request Peer AI Chat'
   };
   return labels[type] || type;
 }
@@ -605,14 +707,23 @@ function renderRequestCenter() {
     return;
   }
 
-  root.innerHTML = myRequests.slice(0, 4).map((request) => `
+  root.innerHTML = myRequests.slice(0, 4).map((request) => {
+    const canOpenPeer = request.type === REQUEST_TYPE.VIEW_PEER_AI_CHAT && request.status === REQUEST_STATUS.APPROVED;
+    return `
     <div class="request-center-item">
-      <span class="request-title">${studentRequestTypeLabel(request.type)}</span>
-      <span class="status-tag ${request.status}">${formatRequestStatusLabel(request.status)}</span>
-      <span class="request-time">${new Date(request.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      <div class="request-center-row-main">
+        <span class="request-title">${studentRequestTypeLabel(request.type)}</span>
+        <span class="status-tag ${request.status}">${formatRequestStatusLabel(request.status)}</span>
+        <span class="request-time">${new Date(request.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div class="request-center-actions">
+        ${canOpenPeer ? `<button type="button" data-open-peer-ai-request="${request.requestId}">${messages.studentOpenPeerAiChat}</button>` : ''}
+      </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
+
 
 function wireStudentActions(renderAll) {
   const moreBtn = document.getElementById('studentMoreBtn');
@@ -650,6 +761,12 @@ function wireStudentActions(renderAll) {
   document.getElementById('studentShareNotesBtn').onclick = () => {
     upsertStudentRequest({ requestType: REQUEST_TYPE.SHARE_NOTES });
     setStudentRequestNotice('Notes share request drafted.');
+    renderAll();
+  };
+
+  document.getElementById('studentRequestPeerAiBtn').onclick = () => {
+    const request = upsertStudentRequest({ requestType: REQUEST_TYPE.VIEW_PEER_AI_CHAT });
+    setStudentRequestNotice(`Peer AI access request drafted for ${request.target?.targetStudentName || 'peer student'}.`);
     renderAll();
   };
 
@@ -739,6 +856,8 @@ export function createRenderAll() {
     renderStudentStatusTags();
     renderStudentRequestNotice();
     renderRequestCenter();
+    renderPeerAiViewer();
+    wirePeerAiViewerActions(renderAll);
     renderTeacherControlTabs(() => renderTeacherControlBody(renderAll));
     renderTeacherControlBody(renderAll);
     renderDebugPanel();
